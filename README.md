@@ -1,6 +1,7 @@
 # music-key-finder (キー推測アプリ)
 
-DTMや耳コピを行うミュージシャンのための、インタラクティブなキー推測補助ツールです。
+DTMや耳コピを行うミュージシャンのための、インタラクティブなキー推測補助ツールです。<br>
+https://yamac-music.github.io/music-key-finder/
 
 ---
 
@@ -36,6 +37,6 @@ DTMや耳コピを行うミュージシャンのための、インタラクテ�
 このアプリケーションは、以下の技術を使用して構築されています。
 
 * **Frontend:** HTML5, CSS3, JavaScript (ES6+)
-* **Styling:** [Tailwind CSS](https://tailwindcss.com/) - 迅速なUI開発のためのユーティリティファーストCSSフレームワーク。
-* **Web Audio:** [Tone.js](https://tonejs.github.io/) - Web Audio APIを扱いやすくし、音声合成や再生を容易にするためのフレームワーク。
+* **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+* **Web Audio:** [Tone.js](https://tonejs.github.io/)
 
