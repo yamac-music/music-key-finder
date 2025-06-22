@@ -699,8 +699,7 @@
                         const audioReady = await initializeAudio();
                         if (!audioReady) return;
                     }
-                    const scaleNotesWithOctave = result.scaleNotes.map(note => note + '4');
-                    playScaleSequentially(scaleNotesWithOctave);
+                    playScaleSequentially(result.scaleNotes);
                 });
                 
                 scaleNotesDiv.appendChild(scaleNotesSpan);
@@ -718,18 +717,21 @@
          * スケールの音を上昇順で順次再生します。
          */
         async function playScaleSequentially(scaleNotes) {
-            // スケールを上昇を3オクターブから6オクターブまで再生
+            // スケールの音名をクロマチック順でソート
             const sortedNotes = scaleNotes.slice().sort((a, b) => {
-                const aIndex = allNotes.indexOf(a);
-                const bIndex = allNotes.indexOf(b);
+                const aNote = a.replace(/\d/g, ''); // オクターブ番号を除去
+                const bNote = b.replace(/\d/g, '');
+                const aIndex = allNotes.indexOf(aNote);
+                const bIndex = allNotes.indexOf(bNote);
                 return aIndex - bIndex;
             });
             
-            // 3オクターブから6オクターブまで順次再生
-            for (let octave = 3; octave <= 6; octave++) {
-                for (const note of sortedNotes) {
+            // 4オクターブから5オクターブで順次再生
+            for (let octave = 4; octave <= 5; octave++) {
+                for (const noteWithOctave of sortedNotes) {
+                    const note = noteWithOctave.replace(/\d/g, ''); // オクターブ番号を除去
                     playNote(note + octave);
-                    await new Promise(resolve => setTimeout(resolve, 250));
+                    await new Promise(resolve => setTimeout(resolve, 300));
                 }
             }
         }
