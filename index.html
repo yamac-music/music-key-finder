@@ -12,8 +12,13 @@
         }
         .note-button {
             transition: all 0.2s ease-in-out;
-            position: relative; /* キーボードヒントの位置調整のため */
-            padding-bottom: 1.75rem; /* キーボードヒント用のスペース */
+            position: relative;
+            padding-bottom: 1.2rem;
+            min-height: 3rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
         .note-button.selected {
             transform: scale(1.1);
@@ -21,13 +26,13 @@
         }
         .keyboard-hint {
             position: absolute;
-            bottom: 0.25rem; /* 必要に応じて調整 */
+            bottom: 0.125rem;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 0.65rem; /* ヒント用の小さいフォント */
-            color: #cbd5e1; /* slate-300 */
-            background-color: rgba(30, 41, 59, 0.5); /* slate-800 半透明 */
-            padding: 0.1rem 0.3rem;
+            font-size: 0.5rem;
+            color: #cbd5e1;
+            background-color: rgba(30, 41, 59, 0.7);
+            padding: 0.05rem 0.2rem;
             border-radius: 0.125rem;
         }
         .result-item {
@@ -63,20 +68,94 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
         /* 入力モード切り替えのスタイリング */
-        .input-mode-toggle label {
+        .input-mode-toggle label, .layout-toggle label {
             cursor: pointer;
             padding: 0.5rem 1rem;
             border: 1px solid #4b5563; /* gray-600 */
             border-radius: 0.375rem;
             transition: background-color 0.2s, color 0.2s;
         }
-        .input-mode-toggle input[type="radio"] {
+        .input-mode-toggle input[type="radio"], .layout-toggle input[type="radio"] {
             display: none; /* ラジオボタン本体は非表示 */
         }
-        .input-mode-toggle input[type="radio"]:checked + label {
+        .input-mode-toggle input[type="radio"]:checked + label, .layout-toggle input[type="radio"]:checked + label {
             background-color: #0ea5e9; /* sky-500 */
             color: white;
             border-color: #0284c7; /* sky-600 */
+        }
+        
+        /* ピアノキーボードスタイル */
+        .piano-keyboard {
+            position: relative;
+            height: 80px;
+            background: #1e293b;
+            border-radius: 0.5rem;
+            overflow: visible;
+            display: flex;
+            align-items: flex-end;
+            padding: 0.5rem;
+        }
+        
+        .white-key {
+            width: 2.5rem;
+            height: 4rem;
+            background: white;
+            border: 2px solid #94a3b8;
+            border-radius: 0 0 0.25rem 0.25rem;
+            margin-right: 1px;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0.25rem;
+            color: #1e293b;
+            font-weight: bold;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .white-key:hover {
+            background: #f1f5f9;
+            transform: translateY(-2px);
+        }
+        
+        .white-key.selected {
+            background: #ec4899;
+            color: white;
+            border-color: #be185d;
+        }
+        
+        .black-key {
+            width: 1.75rem;
+            height: 2.5rem;
+            background: #1e293b;
+            border: 2px solid #64748b;
+            border-radius: 0 0 0.25rem 0.25rem;
+            position: absolute;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0.125rem;
+            color: white;
+            font-weight: bold;
+            font-size: 0.625rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .black-key:hover {
+            background: #475569;
+            transform: translateY(-2px);
+        }
+        
+        .black-key.selected {
+            background: #ec4899;
+            border-color: #be185d;
         }
     </style>
 </head>
@@ -90,24 +169,112 @@
 
         <div class="mb-4 text-center">
             <h3 class="text-md font-semibold mb-2 text-slate-300">入力モード:</h3>
-            <div class="input-mode-toggle inline-flex rounded-md shadow-sm" role="group">
+            <div class="input-mode-toggle inline-flex rounded-md shadow-sm mb-3" role="group">
                 <input type="radio" name="input-mode" id="mode-click" value="click" checked class="hidden">
                 <label for="mode-click" class="rounded-l-md">クリック</label>
                 
                 <input type="radio" name="input-mode" id="mode-keyboard" value="keyboard" class="hidden">
                 <label for="mode-keyboard" class="rounded-r-md border-l-0">キーボード</label>
             </div>
+            
+            <h3 class="text-md font-semibold mb-2 text-slate-300">レイアウト:</h3>
+            <div class="layout-toggle inline-flex rounded-md shadow-sm" role="group">
+                <input type="radio" name="layout-mode" id="layout-grid" value="grid" checked class="hidden">
+                <label for="layout-grid" class="rounded-l-md">グリッド</label>
+                
+                <input type="radio" name="layout-mode" id="layout-piano" value="piano" class="hidden">
+                <label for="layout-piano" class="rounded-r-md border-l-0">ピアノ</label>
+            </div>
         </div>
 
         <div class="mb-6">
             <h2 class="text-xl font-semibold mb-1 text-slate-300">1. 使用されている音を選択:</h2>
-            <p id="input-mode-hint" class="text-sm text-slate-400 mb-3">（クリックで再生・選択）</p>
-            <div id="note-selection-area" class="grid grid-cols-4 sm:grid-cols-6 gap-2 md:gap-3">
+            <p id="input-mode-hint" class="text-sm text-slate-400 mb-1">（クリックで再生・選択）</p>
+            <p class="text-xs text-slate-500 mb-3">左側が低音（オクターブ3）、右側が高音（オクターブ4）</p>
+            
+            <!-- 音量とBPMコントロール -->
+            <div class="mb-4 flex flex-wrap gap-4 items-center">
+                <div class="flex items-center gap-2">
+                    <label class="text-sm text-slate-400">音量:</label>
+                    <input type="range" id="volume-slider" min="-30" max="0" value="-12" class="w-20">
+                    <span id="volume-display" class="text-xs text-slate-400">-12dB</span>
                 </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-sm text-slate-400">BPM:</label>
+                    <input type="number" id="bpm-input" min="60" max="200" value="120" class="w-16 px-2 py-1 text-sm bg-slate-700 text-white rounded border border-slate-600">
+                </div>
+            </div>
+            
+            <div id="note-selection-area" class="mb-4">
+                <!-- グリッドレイアウト -->
+                <div id="grid-layout">
+                    <!-- オクターブ4の音 -->
+                    <div class="mb-2">
+                        <h4 class="text-sm text-slate-400 mb-2">オクターブ4 (高音)</h4>
+                        <div id="octave4-notes" class="grid grid-cols-6 sm:grid-cols-12 gap-1 md:gap-2"></div>
+                    </div>
+                    <!-- オクターブ3の音 -->
+                    <div>
+                        <h4 class="text-sm text-slate-400 mb-2">オクターブ3 (低音)</h4>
+                        <div id="octave3-notes" class="grid grid-cols-6 sm:grid-cols-12 gap-1 md:gap-2"></div>
+                    </div>
+                </div>
+                
+                <!-- ピアノレイアウト -->
+                <div id="piano-layout" class="hidden">
+                    <div class="mb-2">
+                        <h4 class="text-sm text-slate-400 mb-2">オクターブ4 (高音)</h4>
+                        <div id="piano-octave4" class="piano-keyboard mb-4"></div>
+                    </div>
+                    <div>
+                        <h4 class="text-sm text-slate-400 mb-2">オクターブ3 (低音)</h4>
+                        <div id="piano-octave3" class="piano-keyboard"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 再生コントロール -->
+            <div class="mb-4 flex flex-wrap gap-2">
+                <button id="playback-button" class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-md shadow-md transition-colors">
+                    順次再生
+                </button>
+                <button id="chord-button" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md shadow-md transition-colors">
+                    和音確認
+                </button>
+                <button id="loop-button" class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-md shadow-md transition-colors">
+                    ループ再生
+                </button>
+                <button id="stop-loop-button" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-md shadow-md transition-colors" disabled>
+                    停止
+                </button>
+            </div>
+            
+            <!-- スケールプリセット -->
+            <div class="mb-4">
+                <h4 class="text-sm text-slate-400 mb-2">クイック選択:</h4>
+                <div class="flex flex-wrap gap-2">
+                    <button id="preset-c-major-penta" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded shadow transition-colors">
+                        Cメジャーペンタ
+                    </button>
+                    <button id="preset-a-minor-penta" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded shadow transition-colors">
+                        Aマイナーペンタ
+                    </button>
+                    <button id="preset-c-blues" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded shadow transition-colors">
+                        Cブルース
+                    </button>
+                    <button id="preset-a-minor-blues" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded shadow transition-colors">
+                        Aマイナーブルース
+                    </button>
+                </div>
+            </div>
             <div class="mt-4 flex justify-between items-center">
                 <div>
                     <span class="text-slate-400 text-sm">選択中の音: </span>
                     <span id="selected-notes-display" class="text-sky-400 font-semibold">なし</span>
+                </div>
+                <div class="mt-2">
+                    <span class="text-slate-400 text-sm">履歴: </span>
+                    <span id="note-history-display" class="text-slate-300 text-sm">なし</span>
                 </div>
                 <button id="clear-selection-button" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-md shadow-md transition-colors">
                     クリア
@@ -159,6 +326,16 @@
 
         // --- 音楽関連データとアプリケーションの状態 ---
         const allNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']; // 全ての音名
+        const octaveRange = [3, 4]; // 対応するオクターブ範囲 (C3-B4)
+        const allNotesWithOctaves = []; // オクターブ付きの全音名を格納
+        
+        // オクターブ付きの音名配列を生成
+        octaveRange.forEach(octave => {
+            allNotes.forEach(note => {
+                allNotesWithOctaves.push(`${note}${octave}`);
+            });
+        });
+        
         const scales = {}; // 各キーのスケール構成音を格納するオブジェクト (例: {'C_major': ['C', 'D', 'E', ...]})
         const majorIntervals = [0, 2, 4, 5, 7, 9, 11]; // メジャースケールのルートからのインターバル
         const minorIntervals = [0, 2, 3, 5, 7, 8, 10]; // ナチュラルマイナースケールのルートからのインターバル
@@ -169,17 +346,29 @@
             scales[`${rootNote}_minor`] = minorIntervals.map(interval => allNotes[(i + interval) % 12]);
         });
 
-        let selectedUserNotes = new Set(); // ユーザーが選択した音を格納するSet (重複なし)
+        let selectedUserNotes = new Set(); // ユーザーが選択した音を格納するSet (重複なし、オクターブ付き)
+        let noteHistory = []; // 最近選択された音の履歴
+        let isLooping = false; // ループ再生中かどうか
+        let loopInterval = null; // ループ再生のインターバルID
+        let currentBPM = 120; // 現在のBPM設定
+        let currentVolume = -12; // 現在の音量設定
+        let currentLayout = 'grid'; // 現在のレイアウトモード
         let synth; // Tone.jsのシンセサイザーインスタンス
         let audioContextStarted = false; // AudioContextがユーザー操作により開始されたかのフラグ
         let currentInputMode = 'click'; // 現在の入力モード ('click' または 'keyboard')
 
         // キーボードのキーと音名のマッピング (ピアノ風配列を想定)
-        // 白鍵: A(C), S(D), D(E), F(F), G(G), H(A), J(B)
-        // 黒鍵: W(C#), E(D#), T(F#), Y(G#), U(A#)
+        // オクターブ3: 白鍵: Z(C3), X(D3), C(E3), V(F3), B(G3), N(A3), M(B3)
+        // オクターブ3: 黒鍵: S(C#3), D(D#3), G(F#3), H(G#3), J(A#3)
+        // オクターブ4: 白鍵: Q(C4), W(D4), E(E4), R(F4), T(G4), Y(A4), U(B4)
+        // オクターブ4: 黒鍵: 2(C#4), 3(D#4), 5(F#4), 6(G#4), 7(A#4)
         const keyToNoteMapping = {
-            'a': 'C', 'w': 'C#', 's': 'D', 'e': 'D#', 'd': 'E', 'f': 'F',
-            't': 'F#', 'g': 'G', 'y': 'G#', 'h': 'A', 'u': 'A#', 'j': 'B'
+            // オクターブ3
+            'z': 'C3', 's': 'C#3', 'x': 'D3', 'd': 'D#3', 'c': 'E3', 'v': 'F3',
+            'g': 'F#3', 'b': 'G3', 'h': 'G#3', 'n': 'A3', 'j': 'A#3', 'm': 'B3',
+            // オクターブ4
+            'q': 'C4', '2': 'C#4', 'w': 'D4', '3': 'D#4', 'e': 'E4', 'r': 'F4',
+            '5': 'F#4', 't': 'G4', '6': 'G#4', 'y': 'A4', '7': 'A#4', 'u': 'B4'
         };
         // 音名から対応するキーボードのキーへの逆引きマップ (ボタンへのヒント表示用)
         const noteToKeyMapping = Object.fromEntries(Object.entries(keyToNoteMapping).map(([key, note]) => [note, key.toUpperCase()]));
@@ -209,10 +398,10 @@
             }
             
             if (!synth) { // シンセサイザーがまだ作成されていない場合
-                synth = new Tone.Synth({
+                synth = new Tone.PolySynth(Tone.Synth, {
                     oscillator: { type: 'sine' }, // 音色はシンプルなサイン波
                     envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.5 }, // 音の立ち上がりや減衰の設定
-                    volume: -12 // 音量を少し下げる
+                    volume: currentVolume // 設定された音量を使用
                 }).toDestination(); // 音を最終出力先（スピーカーなど）に接続
             }
             return audioContextStarted;
@@ -234,65 +423,196 @@
         // 各入力モード選択ラジオボタンに対してイベントリスナーを設定
         inputModeRadios.forEach(radio => {
             radio.addEventListener('change', (event) => {
-                currentInputMode = event.target.value; // 現在の入力モードを更新
-                // 入力モードに応じてヒントテキストを更新
+                currentInputMode = event.target.value;
                 if (currentInputMode === 'keyboard') {
                     inputModeHint.textContent = '（キーボードで入力・選択）';
                 } else {
                     inputModeHint.textContent = '（クリックで再生・選択）';
                 }
-                console.log("入力モードが変更されました:", currentInputMode);
+            });
+        });
+        
+        // レイアウトモード切り替え
+        const layoutModeRadios = document.querySelectorAll('input[name="layout-mode"]');
+        layoutModeRadios.forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                currentLayout = event.target.value;
+                
+                if (currentLayout === 'piano') {
+                    document.getElementById('grid-layout').classList.add('hidden');
+                    document.getElementById('piano-layout').classList.remove('hidden');
+                } else {
+                    document.getElementById('grid-layout').classList.remove('hidden');
+                    document.getElementById('piano-layout').classList.add('hidden');
+                }
+                
+                // ボタンを再初期化
+                initializeNoteButtons();
+                
+                // 選択状態をリセット
+                selectedUserNotes.clear();
+                updateSelectedNotesDisplay();
             });
         });
 
         // --- UIの初期化と音選択のインタラクション ---
         /**
          * 音名選択ボタンを動的に生成し、画面に配置します。
-         * 各ボタンには、対応する音名と、キーボード入力モード時の対応キーが表示されます。
          */
         function initializeNoteButtons() {
-            noteSelectionArea.innerHTML = ''; // 既存のボタンがあればクリア
+            if (currentLayout === 'grid') {
+                initializeGridLayout();
+            } else {
+                initializePianoLayout();
+            }
+        }
+        
+        /**
+         * グリッドレイアウトでボタンを初期化します。
+         */
+        function initializeGridLayout() {
+            const octave4Container = document.getElementById('octave4-notes');
+            const octave3Container = document.getElementById('octave3-notes');
+            
+            octave4Container.innerHTML = '';
+            octave3Container.innerHTML = '';
+            
             allNotes.forEach(note => {
-                const button = document.createElement('button');
-                button.textContent = note; // ボタンのテキストに音名を設定
-                button.dataset.note = note; // data属性に音名を保持
-                button.classList.add(
-                    'note-button', 'py-3', 'px-2', 'rounded-md', 'font-semibold', 'shadow',
-                    'bg-slate-600', 'hover:bg-pink-600', 'text-white', 'border', 'border-slate-500'
-                );
-
-                // キーボードヒント（対応するキー）をボタン内に追加
-                const keyboardKey = noteToKeyMapping[note];
-                if (keyboardKey) {
-                    const hintSpan = document.createElement('span');
-                    hintSpan.classList.add('keyboard-hint');
-                    hintSpan.textContent = keyboardKey;
-                    button.appendChild(hintSpan);
-                }
+                const noteWithOctave4 = `${note}4`;
+                const button4 = createNoteButton(noteWithOctave4, 'grid');
+                octave4Container.appendChild(button4);
                 
-                // ボタンクリック時のイベントリスナーを設定
-                button.addEventListener('click', async () => {
-                    // 音の選択/解除と再生を行う共通関数を呼び出す
-                    handleNoteInteraction(note, button);
-                });
-                noteSelectionArea.appendChild(button); // 生成したボタンをエリアに追加
+                const noteWithOctave3 = `${note}3`;
+                const button3 = createNoteButton(noteWithOctave3, 'grid');
+                octave3Container.appendChild(button3);
             });
+        }
+        
+        /**
+         * ピアノレイアウトでボタンを初期化します。
+         */
+        function initializePianoLayout() {
+            const piano4Container = document.getElementById('piano-octave4');
+            const piano3Container = document.getElementById('piano-octave3');
+            
+            piano4Container.innerHTML = '';
+            piano3Container.innerHTML = '';
+            
+            [4, 3].forEach(octave => {
+                const container = octave === 4 ? piano4Container : piano3Container;
+                const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+                const blackKeyPositions = { 'C#': 0.7, 'D#': 1.7, 'F#': 3.7, 'G#': 4.7, 'A#': 5.7 };
+                
+                // 白鍵を作成
+                whiteKeys.forEach((note, index) => {
+                    const noteWithOctave = `${note}${octave}`;
+                    const button = createPianoKey(noteWithOctave, 'white', index);
+                    container.appendChild(button);
+                });
+                
+                // 黒鍵を作成
+                Object.entries(blackKeyPositions).forEach(([note, position]) => {
+                    const noteWithOctave = `${note}${octave}`;
+                    const button = createPianoKey(noteWithOctave, 'black', position);
+                    container.appendChild(button);
+                });
+            });
+        }
+        
+        /**
+         * 個別の音名ボタンを作成します。
+         */
+        function createNoteButton(noteWithOctave, layout = 'grid') {
+            const button = document.createElement('button');
+            const note = noteWithOctave.slice(0, -1);
+            const octave = noteWithOctave.slice(-1);
+            
+            button.innerHTML = `<div class="text-sm font-bold">${note}</div><div class="text-xs opacity-75">${octave}</div>`;
+            button.dataset.note = noteWithOctave;
+            
+            const isBlackKey = note.includes('#');
+            if (isBlackKey) {
+                button.classList.add(
+                    'note-button', 'py-2', 'px-1', 'rounded-md', 'font-semibold', 'shadow',
+                    'bg-slate-800', 'hover:bg-pink-600', 'text-white', 'border', 'border-slate-700',
+                    'text-xs'
+                );
+            } else {
+                button.classList.add(
+                    'note-button', 'py-2', 'px-1', 'rounded-md', 'font-semibold', 'shadow',
+                    'bg-slate-600', 'hover:bg-pink-600', 'text-white', 'border', 'border-slate-500',
+                    'text-sm'
+                );
+            }
+
+            const keyboardKey = noteToKeyMapping[noteWithOctave];
+            if (keyboardKey) {
+                const hintSpan = document.createElement('span');
+                hintSpan.classList.add('keyboard-hint');
+                hintSpan.textContent = keyboardKey;
+                button.appendChild(hintSpan);
+            }
+            
+            button.addEventListener('click', async () => {
+                handleNoteInteraction(noteWithOctave, button);
+            });
+            
+            return button;
+        }
+        
+        /**
+         * ピアノキーを作成します。
+         */
+        function createPianoKey(noteWithOctave, keyType, position) {
+            const button = document.createElement('button');
+            const note = noteWithOctave.slice(0, -1);
+            const octave = noteWithOctave.slice(-1);
+            
+            button.dataset.note = noteWithOctave;
+            
+            if (keyType === 'white') {
+                button.classList.add('white-key');
+                button.innerHTML = `<div class="mt-auto">${note}</div><div class="text-xs opacity-75">${octave}</div>`;
+            } else {
+                button.classList.add('black-key');
+                button.style.left = `${position * 2.6}rem`;
+                button.innerHTML = `<div class="mt-auto text-center">${note}<br><span class="text-xs">${octave}</span></div>`;
+            }
+            
+            const keyboardKey = noteToKeyMapping[noteWithOctave];
+            if (keyboardKey) {
+                const hintSpan = document.createElement('span');
+                hintSpan.classList.add('keyboard-hint');
+                hintSpan.textContent = keyboardKey;
+                hintSpan.style.fontSize = '0.4rem';
+                button.appendChild(hintSpan);
+            }
+            
+            button.addEventListener('click', async () => {
+                handleNoteInteraction(noteWithOctave, button);
+            });
+            
+            return button;
         }
         
         /**
          * 音の選択/解除と再生を行う共通の処理。
          * クリックまたはキーボード入力から呼び出されます。
          * @async
-         * @param {string} note - 対象の音名 (例: 'C', 'C#')。
+         * @param {string} noteWithOctave - 対象の音名（オクターブ付き） (例: 'C4', 'C#3')。
          * @param {HTMLElement} buttonElement - 対応するHTMLボタン要素。
          */
-        async function handleNoteInteraction(note, buttonElement) {
-            if (!audioContextStarted) { // オーディオがまだ初期化されていない場合
-                const audioReady = await initializeAudio(); // オーディオを初期化
-                if (!audioReady) return; // 初期化に失敗したら処理を中断
+        async function handleNoteInteraction(noteWithOctave, buttonElement) {
+            if (!audioContextStarted) {
+                const audioReady = await initializeAudio();
+                if (!audioReady) return;
             }
-            toggleNoteSelectionUI(note, buttonElement); // UI上の選択状態を切り替え
-            playNote(note + '4'); // 音を再生 (デフォルトで4オクターブ)
+            
+            toggleNoteSelectionUI(noteWithOctave, buttonElement);
+            playNote(noteWithOctave);
+            
+            // 履歴に追加
+            addToHistory(noteWithOctave);
         }
 
         /**
@@ -300,36 +620,102 @@
          * @param {string} noteWithOctave - 再生する音名とオクターブ (例: 'C4', 'F#5')。
          */
         function playNote(noteWithOctave) {
-            if (synth && audioContextStarted) { // シンセサイザーが準備完了かつオーディオが開始されている場合
+            if (synth && audioContextStarted) {
                 try {
-                    synth.triggerAttackRelease(noteWithOctave, "8n"); // 指定された音を8分音符の長さで再生
+                    synth.triggerAttackRelease(noteWithOctave, "8n");
                 } catch (e) { console.error("音の再生中にエラー:", e); }
             } else if (!audioContextStarted) {
-                console.warn("AudioContextが開始されていません。音を再生するには、再度ボタンをクリックするかキーを入力してください。");
+                console.warn("AudioContextが開始されていません。");
+            }
+        }
+        
+        /**
+         * 複数の音を同時に再生します。
+         * @param {Array} notes - 再生する音名の配列。
+         */
+        function playChord(notes) {
+            if (synth && audioContextStarted && notes.length > 0) {
+                try {
+                    synth.triggerAttackRelease(notes, "2n");
+                } catch (e) { console.error("和音の再生中にエラー:", e); }
+            }
+        }
+        
+        /**
+         * 選択された音を順次再生します。
+         */
+        async function playSequentially() {
+            if (!synth || !audioContextStarted || selectedUserNotes.size === 0) return;
+            
+            const notes = Array.from(selectedUserNotes).sort((a, b) => {
+                const aOctave = parseInt(a.slice(-1));
+                const bOctave = parseInt(b.slice(-1));
+                const aNote = a.slice(0, -1);
+                const bNote = b.slice(0, -1);
+                const aIndex = allNotes.indexOf(aNote);
+                const bIndex = allNotes.indexOf(bNote);
+                return (aOctave * 12 + aIndex) - (bOctave * 12 + bIndex);
+            });
+            
+            for (const note of notes) {
+                playNote(note);
+                await new Promise(resolve => setTimeout(resolve, 500)); // 500ms間隔
             }
         }
 
         /**
          * UI上の音の選択状態（ボタンの見た目など）を切り替えます。
-         * 内部的に `selectedUserNotes` (選択された音のSet) も更新します。
-         * @param {string} note - 対象の音名。
-         * @param {HTMLElement} buttonElement - 対応するHTMLボタン要素。指定されない場合はDOMから検索します。
+         * @param {string} noteWithOctave - 対象の音名（オクターブ付き）。
+         * @param {HTMLElement} buttonElement - 対応するHTMLボタン要素。
          */
-        function toggleNoteSelectionUI(note, buttonElement) {
-            // buttonElementが渡されない場合 (キーボード入力時など) は、data属性からボタンを検索
-            const noteButton = buttonElement || document.querySelector(`.note-button[data-note="${note}"]`);
-            if (!noteButton) return; // 対応するボタンが見つからなければ何もしない
-
-            if (selectedUserNotes.has(note)) { // すでに選択されている場合 (選択解除)
-                selectedUserNotes.delete(note);
-                noteButton.classList.remove('selected', 'bg-pink-500', 'border-pink-400'); // 選択中スタイルを解除
-                noteButton.classList.add('bg-slate-600', 'hover:bg-pink-600', 'border-slate-500'); // 通常スタイルに戻す
-            } else { // まだ選択されていない場合 (新規選択)
-                selectedUserNotes.add(note);
-                noteButton.classList.add('selected', 'bg-pink-500', 'border-pink-400'); // 選択中スタイルを適用
-                noteButton.classList.remove('bg-slate-600', 'hover:bg-pink-600');
+        function toggleNoteSelectionUI(noteWithOctave, buttonElement) {
+            let noteButton = buttonElement;
+            if (!noteButton) {
+                noteButton = document.querySelector(`.note-button[data-note="${noteWithOctave}"]`) ||
+                           document.querySelector(`.white-key[data-note="${noteWithOctave}"]`) ||
+                           document.querySelector(`.black-key[data-note="${noteWithOctave}"]`);
             }
-            updateSelectedNotesDisplay(); // 画面上の選択中ノート表示を更新
+            if (!noteButton) return;
+
+            if (selectedUserNotes.has(noteWithOctave)) {
+                selectedUserNotes.delete(noteWithOctave);
+                noteButton.classList.remove('selected');
+                
+                if (noteButton.classList.contains('white-key')) {
+                    // 白鍵のスタイルリセット
+                    noteButton.style.background = 'white';
+                    noteButton.style.color = '#1e293b';
+                    noteButton.style.borderColor = '#94a3b8';
+                } else if (noteButton.classList.contains('black-key')) {
+                    // 黒鍵のスタイルリセット
+                    noteButton.style.background = '#1e293b';
+                    noteButton.style.borderColor = '#64748b';
+                } else {
+                    // グリッドレイアウトのスタイルリセット
+                    noteButton.classList.remove('bg-pink-500', 'border-pink-400');
+                    const isBlackKey = noteWithOctave.includes('#');
+                    if (isBlackKey) {
+                        noteButton.classList.add('bg-slate-800', 'hover:bg-pink-600', 'border-slate-700');
+                    } else {
+                        noteButton.classList.add('bg-slate-600', 'hover:bg-pink-600', 'border-slate-500');
+                    }
+                }
+            } else {
+                selectedUserNotes.add(noteWithOctave);
+                noteButton.classList.add('selected');
+                
+                if (noteButton.classList.contains('white-key') || noteButton.classList.contains('black-key')) {
+                    // ピアノキーの選択スタイル
+                    noteButton.style.background = '#ec4899';
+                    noteButton.style.color = 'white';
+                    noteButton.style.borderColor = '#be185d';
+                } else {
+                    // グリッドレイアウトの選択スタイル
+                    noteButton.classList.add('bg-pink-500', 'border-pink-400');
+                    noteButton.classList.remove('bg-slate-600', 'bg-slate-800', 'hover:bg-pink-600');
+                }
+            }
+            updateSelectedNotesDisplay();
         }
 
         /**
@@ -339,20 +725,73 @@
             if (selectedUserNotes.size === 0) {
                 selectedNotesDisplay.textContent = 'なし';
             } else {
-                selectedNotesDisplay.textContent = Array.from(selectedUserNotes).join(', '); // Setを配列に変換してカンマ区切りで表示
+                const sortedNotes = Array.from(selectedUserNotes).sort((a, b) => {
+                    const aOctave = parseInt(a.slice(-1));
+                    const bOctave = parseInt(b.slice(-1));
+                    const aNote = a.slice(0, -1);
+                    const bNote = b.slice(0, -1);
+                    const aIndex = allNotes.indexOf(aNote);
+                    const bIndex = allNotes.indexOf(bNote);
+                    return (aOctave * 12 + aIndex) - (bOctave * 12 + bIndex);
+                });
+                selectedNotesDisplay.textContent = sortedNotes.join(', ');
+            }
+        }
+        
+        /**
+         * 音の選択履歴に追加します。
+         */
+        function addToHistory(noteWithOctave) {
+            noteHistory.unshift(noteWithOctave);
+            if (noteHistory.length > 10) {
+                noteHistory = noteHistory.slice(0, 10);
+            }
+            updateHistoryDisplay();
+        }
+        
+        /**
+         * 履歴表示を更新します。
+         */
+        function updateHistoryDisplay() {
+            const historyDisplay = document.getElementById('note-history-display');
+            if (noteHistory.length === 0) {
+                historyDisplay.textContent = 'なし';
+            } else {
+                historyDisplay.textContent = noteHistory.slice(0, 5).join(' → ');
             }
         }
 
         // 「クリア」ボタンがクリックされたときの処理
         clearSelectionButton.addEventListener('click', () => {
-            selectedUserNotes.clear(); // 選択された音のSetを空にする
-            // 全ての音選択ボタンの選択状態をリセット
+            selectedUserNotes.clear();
+            
+            // グリッドレイアウトのボタンをリセット
             document.querySelectorAll('.note-button.selected').forEach(btn => {
                 btn.classList.remove('selected', 'bg-pink-500', 'border-pink-400');
-                btn.classList.add('bg-slate-600', 'hover:bg-pink-600', 'border-slate-500');
+                const noteWithOctave = btn.dataset.note;
+                const isBlackKey = noteWithOctave.includes('#');
+                if (isBlackKey) {
+                    btn.classList.add('bg-slate-800', 'hover:bg-pink-600', 'border-slate-700');
+                } else {
+                    btn.classList.add('bg-slate-600', 'hover:bg-pink-600', 'border-slate-500');
+                }
             });
-            updateSelectedNotesDisplay(); // 選択中ノート表示を更新
-            keyResultsArea.innerHTML = '<p class="text-slate-400">ここに推測結果が表示されます。</p>'; // 結果表示エリアを初期状態に戻す
+            
+            // ピアノキーをリセット
+            document.querySelectorAll('.white-key.selected, .black-key.selected').forEach(key => {
+                key.classList.remove('selected');
+                if (key.classList.contains('white-key')) {
+                    key.style.background = 'white';
+                    key.style.color = '#1e293b';
+                    key.style.borderColor = '#94a3b8';
+                } else {
+                    key.style.background = '#1e293b';
+                    key.style.borderColor = '#64748b';
+                }
+            });
+            
+            updateSelectedNotesDisplay();
+            keyResultsArea.innerHTML = '<p class="text-slate-400">ここに推測結果が表示されます。</p>';
         });
 
         // --- キーボード入力の処理 ---
@@ -367,26 +806,27 @@
                 return;
             }
 
-            const keyPressed = event.key.toLowerCase(); // 押されたキーを小文字で取得
-            const note = keyToNoteMapping[keyPressed]; // マッピングから対応する音名を取得
+            const keyPressed = event.key.toLowerCase();
+            const noteWithOctave = keyToNoteMapping[keyPressed];
 
-            if (note) { // 対応する音名が見つかった場合
-                event.preventDefault(); // ブラウザのデフォルト動作（ページスクロールなど）を抑制
-                const buttonElement = document.querySelector(`.note-button[data-note="${note}"]`);
+            if (noteWithOctave) {
+                event.preventDefault();
+                let buttonElement = document.querySelector(`.note-button[data-note="${noteWithOctave}"]`) ||
+                                  document.querySelector(`.white-key[data-note="${noteWithOctave}"]`) ||
+                                  document.querySelector(`.black-key[data-note="${noteWithOctave}"]`);
                 if (buttonElement) {
-                    // 音の選択/解除と再生を行う共通関数を呼び出す
                     if (!audioContextStarted) {
                         const audioReady = await initializeAudio();
                         if (!audioReady) return;
                     }
-                    toggleNoteSelectionUI(note, buttonElement);
-                    playNote(note + '4');
+                    toggleNoteSelectionUI(noteWithOctave, buttonElement);
+                    playNote(noteWithOctave);
+                    addToHistory(noteWithOctave);
 
-                    // 視覚的なフィードバックとして、対応するボタンを一瞬アクティブに見せる（リング表示）
                     buttonElement.classList.add('ring-2', 'ring-sky-400');
                     setTimeout(() => {
                         buttonElement.classList.remove('ring-2', 'ring-sky-400');
-                    }, 150); // 150ミリ秒後にリング表示を解除
+                    }, 150);
                 }
             }
         });
@@ -422,25 +862,25 @@
             // 定義されている全てのスケール（キー）に対してループ処理
             for (const scaleName in scales) {
                 const scaleNotes = scales[scaleName]; // 現在のスケールの構成音
-                let matchCount = 0; // 選択された音とスケール構成音との一致数
-                selectedUserNotes.forEach(userNote => { // ユーザーが選択した各音についてチェック
-                    if (scaleNotes.includes(userNote)) {
+                let matchCount = 0;
+                const userNotesWithoutOctave = new Set();
+                selectedUserNotes.forEach(userNoteWithOctave => {
+                    const noteWithoutOctave = userNoteWithOctave.slice(0, -1);
+                    userNotesWithoutOctave.add(noteWithoutOctave);
+                    if (scaleNotes.includes(noteWithoutOctave)) {
                         matchCount++;
                     }
                 });
 
-                // 基本スコア: (一致した音の数 / ユーザーが選択した音の総数) * 100
-                const score = (matchCount / selectedUserNotes.size) * 100;
+                const score = (matchCount / userNotesWithoutOctave.size) * 100;
                 
-                // ボーナスポイントの計算
-                const rootOfScale = scaleName.split('_')[0]; // スケールのルート音を取得 (例: 'C_major' -> 'C')
+                const rootOfScale = scaleName.split('_')[0];
                 let bonus = 0;
-                if(selectedUserNotes.has(rootOfScale)) bonus += 10; // ルート音が選択されていれば+10点
+                if(userNotesWithoutOctave.has(rootOfScale)) bonus += 10;
                 
-                // 5度の音（属音）が選択されているかチェック
-                const fifthNoteIndex = (allNotes.indexOf(rootOfScale) + 7) % 12; // 5度の音のインデックスを計算
+                const fifthNoteIndex = (allNotes.indexOf(rootOfScale) + 7) % 12;
                 const fifthNote = allNotes[fifthNoteIndex];
-                if(selectedUserNotes.has(fifthNote)) bonus += 5; // 5度の音が選択されていれば+5点
+                if(userNotesWithoutOctave.has(fifthNote)) bonus += 5;
 
                 if (matchCount > 0) { // 一つでも音が一致していれば結果候補に追加
                     results.push({
@@ -462,26 +902,25 @@
          * @param {Array<Object>} results - 推測結果のオブジェクトの配列。各オブジェクトはkey, score, matchCount, scaleNotesを含む。
          */
         function displayResults(results) {
-            keyResultsArea.innerHTML = ''; // 前回の結果をクリア
-            if (results.length === 0 && selectedUserNotes.size > 0) { // 結果がなく、かつ音が選択されている場合
+            keyResultsArea.innerHTML = '';
+            if (results.length === 0 && selectedUserNotes.size > 0) {
                 keyResultsArea.innerHTML = '<p class="text-red-400">選択された音に適合するキーが見つかりませんでした。音の選択を変えてみてください。</p>';
                 return;
-            } else if (results.length === 0) { // 結果がなく、音も選択されていない場合 (初期状態など)
+            } else if (results.length === 0) {
                  keyResultsArea.innerHTML = '<p class="text-slate-400">ここに推測結果が表示されます。</p>';
                 return;
             }
 
-            const ul = document.createElement('ul'); // 結果をリスト表示
-            ul.classList.add('space-y-2'); // Tailwind CSSでリストアイテム間のスペースを設定
+            const ul = document.createElement('ul');
+            ul.classList.add('space-y-2');
             
-            // 上位5件まで、または全ての結果を表示
             results.slice(0, 5).forEach(result => {
                 const li = document.createElement('li');
                 li.classList.add('result-item', 'p-3', 'bg-slate-600', 'rounded-md', 'shadow');
                 
-                const keyName = result.key.charAt(0).toUpperCase() + result.key.slice(1); // キー名を見やすく整形 (例: C major)
-                const scoreText = `適合度: ${result.score.toFixed(0)}%`; // スコアを整数で表示
-                const matchText = `(一致: ${result.matchCount}/${selectedUserNotes.size}音)`;
+                const keyName = result.key.charAt(0).toUpperCase() + result.key.slice(1);
+                const scoreText = `適合度: ${result.score.toFixed(0)}%`;
+                const matchText = `(一致: ${result.matchCount}/音)`;
 
                 const keySpan = document.createElement('span');
                 keySpan.textContent = keyName;
@@ -491,22 +930,199 @@
                 scoreSpan.textContent = `${scoreText} ${matchText}`;
                 scoreSpan.classList.add('text-sm', 'text-slate-400', 'ml-2');
                 
-                const scaleNotesSpan = document.createElement('div');
+                const scaleNotesDiv = document.createElement('div');
+                scaleNotesDiv.classList.add('text-xs', 'text-slate-500', 'mt-1', 'flex', 'items-center', 'gap-2');
+                
+                const scaleNotesSpan = document.createElement('span');
                 scaleNotesSpan.textContent = `構成音: ${result.scaleNotes.join(', ')}`;
-                scaleNotesSpan.classList.add('text-xs', 'text-slate-500', 'mt-1');
+                
+                const previewButton = document.createElement('button');
+                previewButton.textContent = '試聴';
+                previewButton.classList.add('px-2', 'py-1', 'bg-green-600', 'hover:bg-green-700', 'text-white', 'text-xs', 'rounded', 'transition-colors');
+                previewButton.addEventListener('click', async () => {
+                    if (!audioContextStarted) {
+                        const audioReady = await initializeAudio();
+                        if (!audioReady) return;
+                    }
+                    const scaleNotesWithOctave = result.scaleNotes.map(note => note + '4');
+                    playScaleSequentially(scaleNotesWithOctave);
+                });
+                
+                scaleNotesDiv.appendChild(scaleNotesSpan);
+                scaleNotesDiv.appendChild(previewButton);
 
                 li.appendChild(keySpan);
                 li.appendChild(scoreSpan);
-                li.appendChild(scaleNotesSpan);
+                li.appendChild(scaleNotesDiv);
                 ul.appendChild(li);
             });
             keyResultsArea.appendChild(ul);
         }
+        
+        /**
+         * スケールの音を順次再生します。
+         */
+        async function playScaleSequentially(scaleNotes) {
+            for (const note of scaleNotes) {
+                playNote(note);
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+        }
+        
+        /**
+         * スケールプリセットを適用します。
+         */
+        function applyScalePreset(scaleName) {
+            const notes = scalePresets[scaleName];
+            if (!notes) return;
+            
+            // 現在の選択をクリア
+            selectedUserNotes.clear();
+            document.querySelectorAll('.note-button.selected, .white-key.selected, .black-key.selected').forEach(btn => {
+                toggleNoteSelectionUI(btn.dataset.note, btn);
+            });
+            
+            // プリセットの音を選択
+            notes.forEach(noteWithOctave => {
+                const button = document.querySelector(`.note-button[data-note="${noteWithOctave}"]`) ||
+                              document.querySelector(`.white-key[data-note="${noteWithOctave}"]`) ||
+                              document.querySelector(`.black-key[data-note="${noteWithOctave}"]`);
+                if (button) {
+                    toggleNoteSelectionUI(noteWithOctave, button);
+                }
+            });
+        }
 
+        // 新しいコントロールのイベントリスナーを設定
+        
+        // スケールプリセットのデータ
+        const scalePresets = {
+            'Cメジャーペンタトニック': ['C4', 'D4', 'E4', 'G4', 'A4'],
+            'Aマイナーペンタトニック': ['A3', 'C4', 'D4', 'E4', 'G4'],
+            'Cブルース': ['C4', 'D#4', 'F4', 'F#4', 'G4', 'A#4'],
+            'Aマイナーブルース': ['A3', 'C4', 'D4', 'D#4', 'E4', 'G4'],
+        };
+        
+        // 音量スライダー
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeDisplay = document.getElementById('volume-display');
+        volumeSlider.addEventListener('input', (e) => {
+            currentVolume = parseFloat(e.target.value);
+            volumeDisplay.textContent = `${currentVolume}dB`;
+            if (synth) {
+                synth.volume.value = currentVolume;
+            }
+        });
+        
+        // BPM入力
+        const bpmInput = document.getElementById('bpm-input');
+        bpmInput.addEventListener('change', (e) => {
+            currentBPM = parseInt(e.target.value);
+        });
+        
+        // 順次再生ボタン
+        const playbackButton = document.getElementById('playback-button');
+        playbackButton.addEventListener('click', async () => {
+            if (!audioContextStarted) {
+                const audioReady = await initializeAudio();
+                if (!audioReady) return;
+            }
+            if (selectedUserNotes.size === 0) {
+                showModal('再生する音を選択してください。');
+                return;
+            }
+            playSequentially();
+        });
+        
+        // 和音確認ボタン
+        const chordButton = document.getElementById('chord-button');
+        chordButton.addEventListener('click', async () => {
+            if (!audioContextStarted) {
+                const audioReady = await initializeAudio();
+                if (!audioReady) return;
+            }
+            if (selectedUserNotes.size === 0) {
+                showModal('再生する音を選択してください。');
+                return;
+            }
+            const notes = Array.from(selectedUserNotes);
+            playChord(notes);
+        });
+        
+        // ループ再生ボタン
+        const loopButton = document.getElementById('loop-button');
+        const stopLoopButton = document.getElementById('stop-loop-button');
+        
+        loopButton.addEventListener('click', async () => {
+            if (!audioContextStarted) {
+                const audioReady = await initializeAudio();
+                if (!audioReady) return;
+            }
+            if (selectedUserNotes.size === 0) {
+                showModal('再生する音を選択してください。');
+                return;
+            }
+            if (isLooping) return;
+            
+            isLooping = true;
+            loopButton.disabled = true;
+            stopLoopButton.disabled = false;
+            
+            const notes = Array.from(selectedUserNotes).sort((a, b) => {
+                const aOctave = parseInt(a.slice(-1));
+                const bOctave = parseInt(b.slice(-1));
+                const aNote = a.slice(0, -1);
+                const bNote = b.slice(0, -1);
+                const aIndex = allNotes.indexOf(aNote);
+                const bIndex = allNotes.indexOf(bNote);
+                return (aOctave * 12 + aIndex) - (bOctave * 12 + bIndex);
+            });
+            
+            const beatDuration = 60000 / currentBPM; // ms
+            let noteIndex = 0;
+            
+            loopInterval = setInterval(() => {
+                if (!isLooping) return;
+                playNote(notes[noteIndex]);
+                noteIndex = (noteIndex + 1) % notes.length;
+            }, beatDuration);
+        });
+        
+        stopLoopButton.addEventListener('click', () => {
+            isLooping = false;
+            if (loopInterval) {
+                clearInterval(loopInterval);
+                loopInterval = null;
+            }
+            loopButton.disabled = false;
+            stopLoopButton.disabled = true;
+        });
+        
+        // スケールプリセットボタンのイベントリスナー
+        document.getElementById('preset-c-major-penta').addEventListener('click', () => {
+            applyScalePreset('Cメジャーペンタトニック');
+        });
+        
+        document.getElementById('preset-a-minor-penta').addEventListener('click', () => {
+            applyScalePreset('Aマイナーペンタトニック');
+        });
+        
+        document.getElementById('preset-c-blues').addEventListener('click', () => {
+            applyScalePreset('Cブルース');
+        });
+        
+        document.getElementById('preset-a-minor-blues').addEventListener('click', () => {
+            applyScalePreset('Aマイナーブルース');
+        });
+        
         // --- アプリケーションの初期化処理 ---
-        initializeNoteButtons(); // 音選択ボタンを初期化・表示
-        updateSelectedNotesDisplay(); // 「選択中の音」表示を初期化
-        inputModeHint.textContent = '（クリックで再生・選択）'; // 初期入力モードのヒントを設定
+        initializeNoteButtons();
+        updateSelectedNotesDisplay();
+        updateHistoryDisplay();
+        inputModeHint.textContent = '（クリックで再生・選択）';
+        
+        // 初期レイアウトを設定
+        document.getElementById('piano-layout').classList.add('hidden');
 
     </script>
 </body>
