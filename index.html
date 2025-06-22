@@ -107,7 +107,7 @@
         <div class="mb-6">
             <h2 class="text-xl font-semibold mb-1 text-slate-300">1. 使用されている音を選択:</h2>
             <p id="input-mode-hint" class="text-sm text-slate-400 mb-1">（クリックで再生・選択）</p>
-            <p class="text-xs text-slate-500 mb-3">左側が低音（オクターブ3）、右側が高音（オクターブ4）</p>
+            <p class="text-xs text-slate-500 mb-3">左側が低音（オクターブ4）、右側が高音（オクターブ5）</p>
             
             <!-- 音量とBPMコントロール -->
             <div class="mb-4 flex flex-wrap gap-4 items-center">
@@ -123,15 +123,15 @@
             </div>
             
             <div id="note-selection-area" class="mb-4">
-                <!-- オクターブ4の音 -->
+                <!-- オクターブ5の音 -->
                 <div class="mb-2">
-                    <h4 class="text-sm text-slate-400 mb-2">オクターブ4 (高音)</h4>
-                    <div id="octave4-notes" class="grid grid-cols-6 sm:grid-cols-12 gap-1 md:gap-2"></div>
+                    <h4 class="text-sm text-slate-400 mb-2">オクターブ5 (高音)</h4>
+                    <div id="octave5-notes" class="grid grid-cols-6 sm:grid-cols-12 gap-1 md:gap-2"></div>
                 </div>
-                <!-- オクターブ3の音 -->
+                <!-- オクターブ4の音 -->
                 <div>
-                    <h4 class="text-sm text-slate-400 mb-2">オクターブ3 (低音)</h4>
-                    <div id="octave3-notes" class="grid grid-cols-6 sm:grid-cols-12 gap-1 md:gap-2"></div>
+                    <h4 class="text-sm text-slate-400 mb-2">オクターブ4 (低音)</h4>
+                    <div id="octave4-notes" class="grid grid-cols-6 sm:grid-cols-12 gap-1 md:gap-2"></div>
                 </div>
             </div>
             
@@ -210,7 +210,7 @@
 
         // --- 音楽関連データとアプリケーションの状態 ---
         const allNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']; // 全ての音名
-        const octaveRange = [3, 4]; // 対応するオクターブ範囲 (C3-B4)
+        const octaveRange = [4, 5]; // 対応するオクターブ範囲 (C4-B5)
         const allNotesWithOctaves = []; // オクターブ付きの全音名を格納
         
         // オクターブ付きの音名配列を生成
@@ -241,17 +241,17 @@
         let currentInputMode = 'click'; // 現在の入力モード ('click' または 'keyboard')
 
         // キーボードのキーと音名のマッピング (ピアノ風配列を想定)
-        // オクターブ3: 白鍵: Z(C3), X(D3), C(E3), V(F3), B(G3), N(A3), M(B3)
-        // オクターブ3: 黒鍵: S(C#3), D(D#3), G(F#3), H(G#3), J(A#3)
-        // オクターブ4: 白鍵: Q(C4), W(D4), E(E4), R(F4), T(G4), Y(A4), U(B4)
-        // オクターブ4: 黒鍵: 2(C#4), 3(D#4), 5(F#4), 6(G#4), 7(A#4)
+        // オクターブ4: 白鍵: Z(C4), X(D4), C(E4), V(F4), B(G4), N(A4), M(B4)
+        // オクターブ4: 黒鍵: S(C#4), D(D#4), G(F#4), H(G#4), J(A#4)
+        // オクターブ5: 白鍵: Q(C5), W(D5), E(E5), R(F5), T(G5), Y(A5), U(B5)
+        // オクターブ5: 黒鍵: 2(C#5), 3(D#5), 5(F#5), 6(G#5), 7(A#5)
         const keyToNoteMapping = {
-            // オクターブ3
-            'z': 'C3', 's': 'C#3', 'x': 'D3', 'd': 'D#3', 'c': 'E3', 'v': 'F3',
-            'g': 'F#3', 'b': 'G3', 'h': 'G#3', 'n': 'A3', 'j': 'A#3', 'm': 'B3',
             // オクターブ4
-            'q': 'C4', '2': 'C#4', 'w': 'D4', '3': 'D#4', 'e': 'E4', 'r': 'F4',
-            '5': 'F#4', 't': 'G4', '6': 'G#4', 'y': 'A4', '7': 'A#4', 'u': 'B4'
+            'z': 'C4', 's': 'C#4', 'x': 'D4', 'd': 'D#4', 'c': 'E4', 'v': 'F4',
+            'g': 'F#4', 'b': 'G4', 'h': 'G#4', 'n': 'A4', 'j': 'A#4', 'm': 'B4',
+            // オクターブ5
+            'q': 'C5', '2': 'C#5', 'w': 'D5', '3': 'D#5', 'e': 'E5', 'r': 'F5',
+            '5': 'F#5', 't': 'G5', '6': 'G#5', 'y': 'A5', '7': 'A#5', 'u': 'B5'
         };
         // 音名から対応するキーボードのキーへの逆引きマップ (ボタンへのヒント表示用)
         const noteToKeyMapping = Object.fromEntries(Object.entries(keyToNoteMapping).map(([key, note]) => [note, key.toUpperCase()]));
@@ -321,20 +321,20 @@
          * 音名選択ボタンを動的に生成し、画面に配置します。
          */
         function initializeNoteButtons() {
+            const octave5Container = document.getElementById('octave5-notes');
             const octave4Container = document.getElementById('octave4-notes');
-            const octave3Container = document.getElementById('octave3-notes');
             
+            octave5Container.innerHTML = '';
             octave4Container.innerHTML = '';
-            octave3Container.innerHTML = '';
             
             allNotes.forEach(note => {
+                const noteWithOctave5 = `${note}5`;
+                const button5 = createNoteButton(noteWithOctave5);
+                octave5Container.appendChild(button5);
+                
                 const noteWithOctave4 = `${note}4`;
                 const button4 = createNoteButton(noteWithOctave4);
                 octave4Container.appendChild(button4);
-                
-                const noteWithOctave3 = `${note}3`;
-                const button3 = createNoteButton(noteWithOctave3);
-                octave3Container.appendChild(button3);
             });
         }
         
@@ -624,6 +624,7 @@
                         key: scaleName.replace('_', ' '), // 表示用にスケール名を整形 (例: 'C major')
                         score: score + bonus, // 基本スコアにボーナスを加算
                         matchCount: matchCount,
+                        totalSelectedNotes: userNotesWithoutOctave.size, // 選択された音の総数
                         scaleNotes: scaleNotes // 参考情報としてスケール構成音も保持
                     });
                 }
@@ -657,7 +658,7 @@
                 
                 const keyName = result.key.charAt(0).toUpperCase() + result.key.slice(1);
                 const scoreText = `適合度: ${result.score.toFixed(0)}%`;
-                const matchText = `(一致: ${result.matchCount}/音)`;
+                const matchText = `(一致: ${result.matchCount}/${result.totalSelectedNotes}音)`;
 
                 const keySpan = document.createElement('span');
                 keySpan.textContent = keyName;
