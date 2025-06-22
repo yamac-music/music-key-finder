@@ -151,24 +151,6 @@
                 </button>
             </div>
             
-            <!-- スケールプリセット -->
-            <div class="mb-4">
-                <h4 class="text-sm text-slate-400 mb-2">クイック選択:</h4>
-                <div class="flex flex-wrap gap-2">
-                    <button id="preset-c-major-penta" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded shadow transition-colors">
-                        Cメジャーペンタ
-                    </button>
-                    <button id="preset-a-minor-penta" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded shadow transition-colors">
-                        Aマイナーペンタ
-                    </button>
-                    <button id="preset-c-blues" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded shadow transition-colors">
-                        Cブルース
-                    </button>
-                    <button id="preset-a-minor-blues" class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded shadow transition-colors">
-                        Aマイナーブルース
-                    </button>
-                </div>
-            </div>
             <div class="mt-4 flex justify-between items-center">
                 <div>
                     <span class="text-slate-400 text-sm">選択中の音: </span>
@@ -699,7 +681,7 @@
                         const audioReady = await initializeAudio();
                         if (!audioReady) return;
                     }
-                    playScaleSequentially(result.scaleNotes);
+                    playScaleSequentially(result);
                 });
                 
                 scaleNotesDiv.appendChild(scaleNotesSpan);
@@ -714,59 +696,57 @@
         }
         
         /**
-         * スケールの音を上昇順で順次再生します。
+         * スケールの音を1オクターブ分再生します。
+         * ルートから次のオクターブのルートまで、8音を順次再生。
          */
-        async function playScaleSequentially(scaleNotes) {
-            // スケールの音名をクロマチック順でソート
-            const sortedNotes = scaleNotes.slice().sort((a, b) => {
-                const aNote = a.replace(/\d/g, ''); // オクターブ番号を除去
-                const bNote = b.replace(/\d/g, '');
-                const aIndex = allNotes.indexOf(aNote);
-                const bIndex = allNotes.indexOf(bNote);
-                return aIndex - bIndex;
-            });
+        async function playScaleSequentially(scaleData) {
+            // スケール名からルート音を取得 (例: "C major" -> "C")
+            const scaleName = scaleData.key || scaleData.name || 'C';
+            const rootNote = scaleName.split(' ')[0]; // "C major" -> "C"
+            const scaleNotes = scaleData.scaleNotes || scaleData;
             
-            // 4オクターブから5オクターブで順次再生
-            for (let octave = 4; octave <= 5; octave++) {
-                for (const noteWithOctave of sortedNotes) {
-                    const note = noteWithOctave.replace(/\d/g, ''); // オクターブ番号を除去
-                    playNote(note + octave);
-                    await new Promise(resolve => setTimeout(resolve, 300));
+            // ルート音のインデックスを取得
+            const rootIndex = allNotes.indexOf(rootNote);
+            if (rootIndex === -1) return;
+            
+            // ルートから1オクターブ分のスケール音を構築
+            const notesToPlay = [];
+            
+            // まずルート音を追加
+            notesToPlay.push(rootNote + '4');
+            
+            // スケール構成音をルートより上の音から順に追加
+            for (const note of scaleNotes) {
+                const noteIndex = allNotes.indexOf(note);
+                if (noteIndex > rootIndex) {
+                    notesToPlay.push(note + '4');
                 }
+            }
+            
+            // スケール構成音をルートより下の音から順に追加（次のオクターブ）
+            for (const note of scaleNotes) {
+                const noteIndex = allNotes.indexOf(note);
+                if (noteIndex < rootIndex) {
+                    notesToPlay.push(note + '5');
+                }
+            }
+            
+            // 最後に次のオクターブのルート音を追加
+            notesToPlay.push(rootNote + '5');
+            
+            // 最大8音に制限
+            const finalNotes = notesToPlay.slice(0, 8);
+            
+            // 順次再生
+            for (const noteWithOctave of finalNotes) {
+                playNote(noteWithOctave);
+                await new Promise(resolve => setTimeout(resolve, 450));
             }
         }
         
-        /**
-         * スケールプリセットを適用します。
-         */
-        function applyScalePreset(scaleName) {
-            const notes = scalePresets[scaleName];
-            if (!notes) return;
-            
-            // 現在の選択をクリア
-            selectedUserNotes.clear();
-            document.querySelectorAll('.note-button.selected').forEach(btn => {
-                toggleNoteSelectionUI(btn.dataset.note, btn);
-            });
-            
-            // プリセットの音を選択
-            notes.forEach(noteWithOctave => {
-                const button = document.querySelector(`.note-button[data-note="${noteWithOctave}"]`);
-                if (button) {
-                    toggleNoteSelectionUI(noteWithOctave, button);
-                }
-            });
-        }
 
         // 新しいコントロールのイベントリスナーを設定
         
-        // スケールプリセットのデータ
-        const scalePresets = {
-            'Cメジャーペンタトニック': ['C4', 'D4', 'E4', 'G4', 'A4'],
-            'Aマイナーペンタトニック': ['A3', 'C4', 'D4', 'E4', 'G4'],
-            'Cブルース': ['C4', 'D#4', 'F4', 'F#4', 'G4', 'A#4'],
-            'Aマイナーブルース': ['A3', 'C4', 'D4', 'D#4', 'E4', 'G4'],
-        };
         
         // 音量スライダー
         const volumeSlider = document.getElementById('volume-slider');
@@ -863,22 +843,6 @@
             stopLoopButton.disabled = true;
         });
         
-        // スケールプリセットボタンのイベントリスナー
-        document.getElementById('preset-c-major-penta').addEventListener('click', () => {
-            applyScalePreset('Cメジャーペンタトニック');
-        });
-        
-        document.getElementById('preset-a-minor-penta').addEventListener('click', () => {
-            applyScalePreset('Aマイナーペンタトニック');
-        });
-        
-        document.getElementById('preset-c-blues').addEventListener('click', () => {
-            applyScalePreset('Cブルース');
-        });
-        
-        document.getElementById('preset-a-minor-blues').addEventListener('click', () => {
-            applyScalePreset('Aマイナーブルース');
-        });
         
         // --- アプリケーションの初期化処理 ---
         initializeNoteButtons();
