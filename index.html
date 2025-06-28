@@ -597,14 +597,21 @@
             }
 
             const results = []; // 推測結果を格納する配列
+            
+            // 選択された音からオクターブ情報を除去し、重複を排除
+            const userNotesWithoutOctave = new Set();
+            selectedUserNotes.forEach(userNoteWithOctave => {
+                const noteWithoutOctave = userNoteWithOctave.slice(0, -1);
+                userNotesWithoutOctave.add(noteWithoutOctave);
+            });
+            
             // 定義されている全てのスケール（キー）に対してループ処理
             for (const scaleName in scales) {
                 const scaleNotes = scales[scaleName]; // 現在のスケールの構成音
                 let matchCount = 0;
-                const userNotesWithoutOctave = new Set();
-                selectedUserNotes.forEach(userNoteWithOctave => {
-                    const noteWithoutOctave = userNoteWithOctave.slice(0, -1);
-                    userNotesWithoutOctave.add(noteWithoutOctave);
+                
+                // 重複排除済みの音程クラスでマッチング判定
+                userNotesWithoutOctave.forEach(noteWithoutOctave => {
                     if (scaleNotes.includes(noteWithoutOctave)) {
                         matchCount++;
                     }
