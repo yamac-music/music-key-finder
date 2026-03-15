@@ -6,859 +6,1013 @@
     <title>キー推測アプリ - Music Key Finder</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['DM Sans', 'system-ui', 'sans-serif'],
+                    },
+                },
+            },
         }
-        .note-button {
-            transition: all 0.2s ease-in-out;
+    </script>
+    <style>
+        /* ===== Base ===== */
+        body {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            background: #111110;
+            min-height: 100vh;
+        }
+
+        /* ===== Card ===== */
+        .glass {
+            background: #1C1B19;
+            border: 1px solid #2D2B28;
+        }
+
+        /* ===== Piano Keyboard ===== */
+        .piano-container {
             position: relative;
-            padding-bottom: 1.2rem;
-            min-height: 3rem;
+            display: flex;
+            justify-content: center;
+            user-select: none;
+        }
+        .piano-octave {
+            position: relative;
+            display: flex;
+        }
+        .white-key {
+            width: 40px;
+            height: 140px;
+            background: linear-gradient(to bottom, #F5F2ED, #E8E4DE);
+            border: 1px solid #C8C4BC;
+            border-radius: 0 0 6px 6px;
+            cursor: pointer;
+            position: relative;
+            z-index: 1;
+            transition: all 0.1s ease;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-end;
             align-items: center;
+            padding-bottom: 8px;
         }
-        .note-button.selected {
-            transform: scale(1.1);
-            box-shadow: 0 0 15px rgba(236, 72, 153, 0.7); /* pink-500 の影 */
+        .white-key:hover {
+            background: linear-gradient(to bottom, #FEFCF8, #F0ECE6);
         }
-        .keyboard-hint {
+        .white-key:active, .white-key.pressing {
+            background: linear-gradient(to bottom, #E0DCD6, #D0CCC6);
+            transform: translateY(2px);
+            box-shadow: inset 0 2px 3px rgba(0,0,0,0.1);
+        }
+        .white-key.selected {
+            background: linear-gradient(to bottom, #DDAD72, #C8965A);
+            border-color: #B8864A;
+            box-shadow: 0 0 12px rgba(200, 150, 90, 0.25);
+        }
+        .white-key.selected:hover {
+            background: linear-gradient(to bottom, #E8BC84, #D4A46A);
+        }
+        .white-key .note-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #7A756C;
+            pointer-events: none;
+        }
+        .white-key.selected .note-label {
+            color: #fff;
+        }
+        .white-key .key-hint {
+            font-size: 9px;
+            color: #A8A39A;
+            margin-top: 2px;
+            pointer-events: none;
+            background: rgba(0,0,0,0.05);
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+        .white-key.selected .key-hint {
+            color: rgba(255,255,255,0.7);
+            background: rgba(255,255,255,0.15);
+        }
+
+        .black-key {
+            width: 26px;
+            height: 90px;
+            background: linear-gradient(to bottom, #2A2826, #151413);
+            border: 1px solid #0A0A09;
+            border-radius: 0 0 4px 4px;
+            cursor: pointer;
             position: absolute;
-            bottom: 0.125rem;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 0.5rem;
-            color: #cbd5e1;
-            background-color: rgba(30, 41, 59, 0.7);
-            padding: 0.05rem 0.2rem;
-            border-radius: 0.125rem;
+            z-index: 2;
+            transition: all 0.1s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding-bottom: 6px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
         }
+        .black-key:hover {
+            background: linear-gradient(to bottom, #3A3836, #252423);
+        }
+        .black-key:active, .black-key.pressing {
+            height: 86px;
+            background: linear-gradient(to bottom, #201E1C, #0C0B0A);
+        }
+        .black-key.selected {
+            background: linear-gradient(to bottom, #B8864A, #8A6330);
+            border-color: #A07640;
+            box-shadow: 0 4px 12px rgba(184, 134, 74, 0.35);
+        }
+        .black-key.selected:hover {
+            background: linear-gradient(to bottom, #C8965A, #9A7340);
+        }
+        .black-key .note-label {
+            font-size: 9px;
+            font-weight: 600;
+            color: #807A72;
+            pointer-events: none;
+        }
+        .black-key.selected .note-label {
+            color: #fff;
+        }
+        .black-key .key-hint {
+            font-size: 8px;
+            color: #605A52;
+            margin-top: 2px;
+            pointer-events: none;
+        }
+        .black-key.selected .key-hint {
+            color: rgba(255,255,255,0.6);
+        }
+
+        /* Black key positioning */
+        .black-key[data-pos="0"] { left: 27px; }
+        .black-key[data-pos="1"] { left: 67px; }
+        .black-key[data-pos="2"] { left: 147px; }
+        .black-key[data-pos="3"] { left: 187px; }
+        .black-key[data-pos="4"] { left: 227px; }
+
+        /* ===== Score Bar ===== */
+        .score-bar-bg {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 999px;
+            overflow: hidden;
+            height: 6px;
+        }
+        .score-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* ===== Result Item ===== */
         .result-item {
-            transition: background-color 0.3s;
+            transition: all 0.2s ease;
+            cursor: pointer;
         }
         .result-item:hover {
-            background-color: #374151; /* gray-700 */
+            transform: translateX(4px);
+            background: rgba(255, 255, 255, 0.04);
         }
-         .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
+
+        /* ===== Rank Badge ===== */
+        .rank-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
             display: flex;
-            justify-content: center;
             align-items: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 13px;
+            flex-shrink: 0;
         }
-        .modal.is-visible {
-            opacity: 1;
-            visibility: visible;
+
+        /* ===== Toggle ===== */
+        .mode-toggle {
+            position: relative;
+            display: inline-flex;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            padding: 3px;
+            border: 1px solid #2D2B28;
         }
-        .modal-content {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 0.5rem;
-            text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-        /* 入力モード切り替えのスタイリング */
-        .input-mode-toggle label {
+        .mode-toggle label {
+            padding: 6px 16px;
+            border-radius: 8px;
             cursor: pointer;
-            padding: 0.5rem 1rem;
-            border: 1px solid #4b5563; /* gray-600 */
-            border-radius: 0.375rem;
-            transition: background-color 0.2s, color 0.2s;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            color: #706B62;
+            position: relative;
+            z-index: 1;
         }
-        .input-mode-toggle input[type="radio"] {
-            display: none; /* ラジオボタン本体は非表示 */
+        .mode-toggle input[type="radio"] { display: none; }
+        .mode-toggle input[type="radio"]:checked + label {
+            background: rgba(200, 150, 90, 0.15);
+            color: #DDAD72;
         }
-        .input-mode-toggle input[type="radio"]:checked + label {
-            background-color: #0ea5e9; /* sky-500 */
-            color: white;
-            border-color: #0284c7; /* sky-600 */
+
+        /* ===== Control Buttons ===== */
+        .ctrl-btn {
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            border: 1px solid transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .ctrl-btn:hover { transform: translateY(-1px); }
+        .ctrl-btn:active { transform: translateY(0); }
+        .ctrl-btn:disabled { opacity: 0.3; pointer-events: none; }
+
+        /* ===== Toast ===== */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            z-index: 1000;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease;
+            opacity: 0;
+            pointer-events: none;
+            background: #2A2825;
+            color: #DDAD72;
+            border: 1px solid #3A3734;
+        }
+        .toast.visible {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* ===== Animations ===== */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in {
+            animation: fadeInUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        /* ===== Range Slider ===== */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 2px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #C8965A;
+            cursor: pointer;
+            border: 2px solid #DDAD72;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #C8965A;
+            cursor: pointer;
+            border: 2px solid #DDAD72;
+        }
+
+        /* ===== Scrollbar ===== */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+        /* ===== Mobile ===== */
+        @media (max-width: 640px) {
+            .white-key { width: 30px; height: 110px; }
+            .black-key { width: 20px; height: 70px; }
+            .black-key[data-pos="0"] { left: 20px; }
+            .black-key[data-pos="1"] { left: 50px; }
+            .black-key[data-pos="2"] { left: 110px; }
+            .black-key[data-pos="3"] { left: 140px; }
+            .black-key[data-pos="4"] { left: 170px; }
+            .white-key .note-label { font-size: 9px; }
+            .white-key .key-hint { font-size: 7px; }
+            .black-key .note-label { font-size: 7px; }
+            .black-key .key-hint { display: none; }
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-slate-900 to-slate-800 text-gray-200 min-h-screen flex flex-col items-center justify-center p-4">
+<body class="text-stone-200 min-h-screen flex flex-col items-center p-4 md:p-8">
 
-    <div class="bg-slate-800 shadow-2xl rounded-lg p-6 md:p-8 w-full max-w-2xl">
-        <header class="text-center mb-6 md:mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-cyan-400 to-teal-500">キー推測アプリ</h1>
-            <p class="text-slate-400 mt-2">聞こえる音を選択して、キーを推測します。</p>
-        </header>
+    <!-- Toast notification -->
+    <div id="toast" class="toast"></div>
 
-        <div class="mb-4 text-center">
-            <h3 class="text-md font-semibold mb-2 text-slate-300">入力モード:</h3>
-            <div class="input-mode-toggle inline-flex rounded-md shadow-sm mb-3" role="group">
-                <input type="radio" name="input-mode" id="mode-click" value="click" checked class="hidden">
-                <label for="mode-click" class="rounded-l-md">クリック</label>
-                
-                <input type="radio" name="input-mode" id="mode-keyboard" value="keyboard" class="hidden">
-                <label for="mode-keyboard" class="rounded-r-md border-l-0">キーボード</label>
+    <!-- Header -->
+    <header class="text-center mb-8 mt-4">
+        <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-white">
+            Music Key Finder
+        </h1>
+    </header>
+
+    <main class="w-full max-w-3xl space-y-6">
+
+        <!-- Controls Bar -->
+        <div class="glass rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+            <!-- Input Mode -->
+            <div class="mode-toggle">
+                <input type="radio" name="input-mode" id="mode-click" value="click" checked>
+                <label for="mode-click">クリック</label>
+                <input type="radio" name="input-mode" id="mode-keyboard" value="keyboard">
+                <label for="mode-keyboard">キーボード</label>
+            </div>
+
+            <!-- Volume & BPM -->
+            <div class="flex items-center gap-4 text-xs text-stone-500">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072M18.364 5.636a9 9 0 010 12.728M6 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h2l3-3v12l-3-3z"/></svg>
+                    <input type="range" id="volume-slider" min="-30" max="0" value="-12" class="w-16">
+                    <span id="volume-display" class="w-10 text-right">-12dB</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span>BPM</span>
+                    <input type="number" id="bpm-input" min="60" max="200" value="120"
+                        class="w-14 px-2 py-1 text-xs bg-stone-900/80 text-stone-300 rounded-lg border border-stone-700 text-center focus:outline-none focus:border-amber-600/50">
+                </div>
             </div>
         </div>
 
-        <div class="mb-6">
-            <h2 class="text-xl font-semibold mb-1 text-slate-300">1. 使用されている音を選択:</h2>
-            <p id="input-mode-hint" class="text-sm text-slate-400 mb-1">（クリックで再生・選択）</p>
-            <p class="text-xs text-slate-500 mb-3">左側が低音（オクターブ4）、右側が高音（オクターブ5）</p>
-            
-            <!-- 音量とBPMコントロール -->
-            <div class="mb-4 flex flex-wrap gap-4 items-center">
-                <div class="flex items-center gap-2">
-                    <label class="text-sm text-slate-400">音量:</label>
-                    <input type="range" id="volume-slider" min="-30" max="0" value="-12" class="w-20">
-                    <span id="volume-display" class="text-xs text-slate-400">-12dB</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <label class="text-sm text-slate-400">BPM:</label>
-                    <input type="number" id="bpm-input" min="60" max="200" value="120" class="w-16 px-2 py-1 text-sm bg-slate-700 text-white rounded border border-slate-600">
-                </div>
-            </div>
-            
-            <div id="note-selection-area" class="mb-4">
-                <!-- オクターブ5の音 -->
-                <div class="mb-2">
-                    <h4 class="text-sm text-slate-400 mb-2">オクターブ5 (高音)</h4>
-                    <div id="octave5-notes" class="grid grid-cols-6 sm:grid-cols-12 gap-1 md:gap-2"></div>
-                </div>
-                <!-- オクターブ4の音 -->
+        <!-- Piano Section -->
+        <section class="glass rounded-2xl p-5 md:p-6">
+            <div class="flex items-center justify-between mb-4">
                 <div>
-                    <h4 class="text-sm text-slate-400 mb-2">オクターブ4 (低音)</h4>
-                    <div id="octave4-notes" class="grid grid-cols-6 sm:grid-cols-12 gap-1 md:gap-2"></div>
+                    <h2 class="text-base font-semibold text-stone-200">音を選択</h2>
+                    <p id="input-mode-hint" class="text-xs text-stone-500 mt-0.5">クリックで再生・選択</p>
                 </div>
-            </div>
-            
-            <!-- 再生コントロール -->
-            <div class="mb-4 flex flex-wrap gap-2">
-                <button id="playback-button" class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-md shadow-md transition-colors">
-                    順次再生
-                </button>
-                <button id="chord-button" class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md shadow-md transition-colors">
-                    和音確認
-                </button>
-                <button id="loop-button" class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-md shadow-md transition-colors">
-                    ループ再生
-                </button>
-                <button id="stop-loop-button" class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-md shadow-md transition-colors" disabled>
-                    停止
-                </button>
-            </div>
-            
-            <div class="mt-4 flex justify-between items-center">
-                <div>
-                    <span class="text-slate-400 text-sm">選択中の音: </span>
-                    <span id="selected-notes-display" class="text-sky-400 font-semibold">なし</span>
-                </div>
-                <br>
-                <div class="mt-2">
-                    <span class="text-slate-400 text-sm">履歴: </span>
-                    <span id="note-history-display" class="text-slate-300 text-sm">なし</span>
-                </div>
-                <button id="clear-selection-button" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-md shadow-md transition-colors">
+                <button id="clear-selection-button" class="ctrl-btn text-stone-500 hover:text-red-300 hover:bg-red-500/10 border-stone-700">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     クリア
                 </button>
             </div>
-        </div>
 
-        <button id="guess-key-button" class="w-full bg-gradient-to-r from-sky-500 via-cyan-500 to-teal-600 hover:from-sky-600 hover:via-cyan-600 hover:to-teal-700 text-white font-semibold py-3 rounded-md shadow-lg transition-transform hover:scale-105 mb-6">
+            <!-- Piano Keyboards -->
+            <div class="space-y-4">
+                <!-- Octave 5 -->
+                <div>
+                    <div class="text-xs text-stone-600 mb-2 tracking-wider uppercase">Octave 5 — 高音</div>
+                    <div class="piano-container">
+                        <div id="piano-octave5" class="piano-octave"></div>
+                    </div>
+                </div>
+                <!-- Octave 4 -->
+                <div>
+                    <div class="text-xs text-stone-600 mb-2 tracking-wider uppercase">Octave 4 — 低音</div>
+                    <div class="piano-container">
+                        <div id="piano-octave4" class="piano-octave"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selected Notes & Playback -->
+            <div class="mt-5 pt-4 border-t border-stone-800">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs text-stone-500 mb-1">選択中の音</div>
+                        <div id="selected-notes-display" class="text-sm font-medium text-stone-500 truncate">なし</div>
+                    </div>
+                    <div class="flex gap-1.5 flex-wrap">
+                        <button id="playback-button" class="ctrl-btn bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border-emerald-500/20">
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            再生
+                        </button>
+                        <button id="chord-button" class="ctrl-btn bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 border-blue-500/20">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/></svg>
+                            和音
+                        </button>
+                        <button id="loop-button" class="ctrl-btn bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 border-amber-500/20">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                            ループ
+                        </button>
+                        <button id="stop-loop-button" class="ctrl-btn bg-red-500/15 text-red-400 hover:bg-red-500/25 border-red-500/20" disabled>
+                            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+                            停止
+                        </button>
+                    </div>
+                </div>
+                <!-- History -->
+                <div class="mt-2">
+                    <span class="text-xs text-stone-600">履歴: </span>
+                    <span id="note-history-display" class="text-xs text-stone-500">なし</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Analyze Button -->
+        <button id="guess-key-button" class="w-full py-3.5 rounded-2xl font-semibold text-white text-base
+            bg-[#B5843F] hover:bg-[#C8965A]
+            transition-all duration-150 active:scale-[0.99]">
             キーを推測する
         </button>
 
-        <div>
-            <h2 class="text-xl font-semibold mb-1 text-slate-300">2. 推測結果:</h2>
-            <p class="text-xs text-slate-400 mb-3">
-                ※ 適合度は、スケール構成音との一致率に、ルート音(+10pt)や5度の音(+5pt)などのボーナスを加算して計算されるため、100%を超える場合があります。
-            </p>
-            <div id="key-results-area" class="bg-slate-700 p-4 rounded-md min-h-[100px] shadow-inner">
-                <p class="text-slate-400">ここに推測結果が表示されます。</p>
+        <!-- Results -->
+        <section class="glass rounded-2xl p-5 md:p-6">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-base font-semibold text-stone-200">推測結果</h2>
+                <p class="text-[10px] text-stone-600 max-w-xs text-right">
+                    Krumhansl-Schmuckler アルゴリズムによる相関分析
+                </p>
             </div>
-        </div>
-         <p class="text-xs text-slate-500 mt-6 text-center">
-            ※ このアプリは選択された音に基づいて統計的に可能性の高いキーを提示するものであり、100%の精度を保証するものではありません。特に転調が多い曲や複雑なハーモニーを持つ曲では、複数の候補が表示されたり、意図しない結果になることがあります。
+            <div id="key-results-area" class="min-h-[80px]">
+                <p class="text-sm text-stone-600 py-8 text-center">音を選択して「キーを推測する」を押してください</p>
+            </div>
+        </section>
+
+        <!-- Disclaimer -->
+        <p class="text-[10px] text-stone-700 text-center leading-relaxed max-w-lg mx-auto">
+            Krumhansl-Kessler の知覚プロファイルに基づく相関分析でキーを推定します。転調が多い曲や複雑なハーモニーでは意図しない結果になることがあります。
         </p>
-    </div>
+    </main>
 
-    <div id="message-modal" class="modal">
-        <div class="modal-content bg-slate-800 text-slate-200">
-            <p id="modal-text" class="mb-4"></p>
-            <button id="modal-close-button" class="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-md">閉じる</button>
-        </div>
-    </div>
-
-    <footer class="text-center mt-8 text-sm text-slate-500">
-        <p>&copy; 2025 キー推測アプリ</p>
+    <footer class="text-center mt-8 mb-4 text-[11px] text-stone-700">
+        <p>&copy; 2025 Music Key Finder</p>
     </footer>
 
     <script>
-        // --- DOM要素の取得 ---
-        const noteSelectionArea = document.getElementById('note-selection-area'); // 音選択ボタンを表示するエリア
-        const selectedNotesDisplay = document.getElementById('selected-notes-display'); // 選択中の音を表示する場所
-        const clearSelectionButton = document.getElementById('clear-selection-button'); // 選択クリアボタン
-        const guessKeyButton = document.getElementById('guess-key-button'); // キー推測実行ボタン
-        const keyResultsArea = document.getElementById('key-results-area'); // 推測結果を表示するエリア
-        const messageModal = document.getElementById('message-modal'); // メッセージモーダル全体
-        const modalText = document.getElementById('modal-text'); // モーダル内のテキスト表示部分
-        const modalCloseButton = document.getElementById('modal-close-button'); // モーダルを閉じるボタン
-        const inputModeRadios = document.querySelectorAll('input[name="input-mode"]'); // 入力モード選択ラジオボタン（複数）
-        const inputModeHint = document.getElementById('input-mode-hint'); // 現在の入力モードのヒント表示
+        // --- DOM ---
+        const selectedNotesDisplay = document.getElementById('selected-notes-display');
+        const clearSelectionButton = document.getElementById('clear-selection-button');
+        const guessKeyButton = document.getElementById('guess-key-button');
+        const keyResultsArea = document.getElementById('key-results-area');
+        const inputModeRadios = document.querySelectorAll('input[name="input-mode"]');
+        const inputModeHint = document.getElementById('input-mode-hint');
+        const toastEl = document.getElementById('toast');
 
-        // --- 音楽関連データとアプリケーションの状態 ---
-        const allNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']; // 全ての音名
-        const octaveRange = [4, 5]; // 対応するオクターブ範囲 (C4-B5)
-        const allNotesWithOctaves = []; // オクターブ付きの全音名を格納
-        
-        // オクターブ付きの音名配列を生成
+        // --- Music Data ---
+        const allNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const octaveRange = [4, 5];
+        const allNotesWithOctaves = [];
         octaveRange.forEach(octave => {
             allNotes.forEach(note => {
                 allNotesWithOctaves.push(`${note}${octave}`);
             });
         });
-        
-        const scales = {}; // 各キーのスケール構成音を格納するオブジェクト (例: {'C_major': ['C', 'D', 'E', ...]})
-        const majorIntervals = [0, 2, 4, 5, 7, 9, 11]; // メジャースケールのルートからのインターバル
-        const minorIntervals = [0, 2, 3, 5, 7, 8, 10]; // ナチュラルマイナースケールのルートからのインターバル
 
-        // 全ての音名をルートとしてメジャースケールとマイナースケールの構成音を生成し、`scales`オブジェクトに格納
+        const scales = {};
+        const majorIntervals = [0, 2, 4, 5, 7, 9, 11];
+        const minorIntervals = [0, 2, 3, 5, 7, 8, 10];
         allNotes.forEach((rootNote, i) => {
             scales[`${rootNote}_major`] = majorIntervals.map(interval => allNotes[(i + interval) % 12]);
             scales[`${rootNote}_minor`] = minorIntervals.map(interval => allNotes[(i + interval) % 12]);
         });
 
-        let selectedUserNotes = new Set(); // ユーザーが選択した音を格納するSet (重複なし、オクターブ付き)
-        let noteHistory = []; // 最近選択された音の履歴
-        let isLooping = false; // ループ再生中かどうか
-        let loopInterval = null; // ループ再生のインターバルID
-        let currentBPM = 120; // 現在のBPM設定
-        let currentVolume = -12; // 現在の音量設定
-        let synth; // Tone.jsのシンセサイザーインスタンス
-        let audioContextStarted = false; // AudioContextがユーザー操作により開始されたかのフラグ
-        let currentInputMode = 'click'; // 現在の入力モード ('click' または 'keyboard')
+        let selectedUserNotes = new Set();
+        let noteHistory = [];
+        let isLooping = false;
+        let loopInterval = null;
+        let currentBPM = 120;
+        let currentVolume = -12;
+        let synth;
+        let audioContextStarted = false;
+        let currentInputMode = 'click';
 
-        // キーボードのキーと音名のマッピング (ピアノ風配列を想定)
-        // オクターブ4: 白鍵: Z(C4), X(D4), C(E4), V(F4), B(G4), N(A4), M(B4)
-        // オクターブ4: 黒鍵: S(C#4), D(D#4), G(F#4), H(G#4), J(A#4)
-        // オクターブ5: 白鍵: Q(C5), W(D5), E(E5), R(F5), T(G5), Y(A5), U(B5)
-        // オクターブ5: 黒鍵: 2(C#5), 3(D#5), 5(F#5), 6(G#5), 7(A#5)
         const keyToNoteMapping = {
-            // オクターブ4
             'z': 'C4', 's': 'C#4', 'x': 'D4', 'd': 'D#4', 'c': 'E4', 'v': 'F4',
             'g': 'F#4', 'b': 'G4', 'h': 'G#4', 'n': 'A4', 'j': 'A#4', 'm': 'B4',
-            // オクターブ5
             'q': 'C5', '2': 'C#5', 'w': 'D5', '3': 'D#5', 'e': 'E5', 'r': 'F5',
             '5': 'F#5', 't': 'G5', '6': 'G#5', 'y': 'A5', '7': 'A#5', 'u': 'B5'
         };
-        // 音名から対応するキーボードのキーへの逆引きマップ (ボタンへのヒント表示用)
         const noteToKeyMapping = Object.fromEntries(Object.entries(keyToNoteMapping).map(([key, note]) => [note, key.toUpperCase()]));
 
-
-        // --- Tone.js (音声再生ライブラリ) の設定 ---
-        /**
-         * Tone.jsのAudioContextを初期化し、シンセサイザーを準備します。
-         * ブラウザのポリシーにより、ユーザーの最初のインタラクションがあるまでAudioContextを開始できない場合があるため、
-         * この関数はインタラクション時（ボタンクリックやキー入力）に呼び出されることを想定しています。
-         * @async
-         * @returns {Promise<boolean>} AudioContextが正常に開始された場合はtrue、それ以外はfalseを返します。
-         */
+        // --- Audio ---
         async function initializeAudio() {
-            if (Tone.context.state !== 'running') { // AudioContextがまだ実行中でない場合
+            if (Tone.context.state !== 'running') {
                 try {
-                    await Tone.start(); // AudioContextを開始
-                    console.log('AudioContextが正常に開始されました。');
+                    await Tone.start();
                     audioContextStarted = true;
                 } catch (e) {
-                    console.error("AudioContextの開始中にエラーが発生しました:", e);
-                    showModal("オーディオの初期化に失敗しました。ブラウザのオーディオ設定を確認してください。");
+                    console.error("AudioContext error:", e);
+                    showToast("オーディオの初期化に失敗しました");
                     return false;
                 }
             } else {
-                audioContextStarted = true; // すでに開始されている場合
+                audioContextStarted = true;
             }
-            
-            if (!synth) { // シンセサイザーがまだ作成されていない場合
+            if (!synth) {
                 synth = new Tone.PolySynth(Tone.Synth, {
-                    oscillator: { type: 'sine' }, // 音色はシンプルなサイン波
-                    envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.5 }, // 音の立ち上がりや減衰の設定
-                    volume: currentVolume // 設定された音量を使用
-                }).toDestination(); // 音を最終出力先（スピーカーなど）に接続
+                    oscillator: { type: 'sine' },
+                    envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.5 },
+                    volume: currentVolume
+                }).toDestination();
             }
             return audioContextStarted;
         }
-        
-        // --- モーダル表示関連のロジック ---
-        /**
-         * 指定されたメッセージでモーダルダイアログを表示します。
-         * @param {string} message - モーダルに表示するテキストメッセージ。
-         */
-        function showModal(message) {
-            modalText.textContent = message;
-            messageModal.classList.add('is-visible');
-        }
-        // モーダルの閉じるボタンがクリックされたときの処理
-        modalCloseButton.addEventListener('click', () => messageModal.classList.remove('is-visible'));
 
-        // --- 入力モード切り替えのロジック ---
-        // 各入力モード選択ラジオボタンに対してイベントリスナーを設定
+        // --- Toast ---
+        let toastTimer;
+        function showToast(message) {
+            clearTimeout(toastTimer);
+            toastEl.textContent = message;
+            toastEl.classList.add('visible');
+            toastTimer = setTimeout(() => toastEl.classList.remove('visible'), 3000);
+        }
+
+        // --- Input Mode ---
         inputModeRadios.forEach(radio => {
             radio.addEventListener('change', (event) => {
                 currentInputMode = event.target.value;
-                if (currentInputMode === 'keyboard') {
-                    inputModeHint.textContent = '（キーボードで入力・選択）';
-                } else {
-                    inputModeHint.textContent = '（クリックで再生・選択）';
-                }
+                inputModeHint.textContent = currentInputMode === 'keyboard'
+                    ? 'キーボードで入力・選択'
+                    : 'クリックで再生・選択';
             });
         });
-        
 
-        // --- UIの初期化と音選択のインタラクション ---
-        /**
-         * 音名選択ボタンを動的に生成し、画面に配置します。
-         */
-        function initializeNoteButtons() {
-            const octave5Container = document.getElementById('octave5-notes');
-            const octave4Container = document.getElementById('octave4-notes');
-            
-            octave5Container.innerHTML = '';
-            octave4Container.innerHTML = '';
-            
-            allNotes.forEach(note => {
-                const noteWithOctave5 = `${note}5`;
-                const button5 = createNoteButton(noteWithOctave5);
-                octave5Container.appendChild(button5);
-                
-                const noteWithOctave4 = `${note}4`;
-                const button4 = createNoteButton(noteWithOctave4);
-                octave4Container.appendChild(button4);
+        // --- Piano UI ---
+        const whiteNoteNames = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+        const blackNoteNames = ['C#', 'D#', null, 'F#', 'G#', 'A#'];
+        const blackKeyPositions = [0, 1, null, 2, 3, 4];
+
+        function buildPianoOctave(containerId, octave) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            // White keys
+            whiteNoteNames.forEach(note => {
+                const noteWithOctave = `${note}${octave}`;
+                const key = document.createElement('div');
+                key.className = 'white-key';
+                key.dataset.note = noteWithOctave;
+
+                const label = document.createElement('span');
+                label.className = 'note-label';
+                label.textContent = note;
+                key.appendChild(label);
+
+                const hint = noteToKeyMapping[noteWithOctave];
+                if (hint) {
+                    const hintEl = document.createElement('span');
+                    hintEl.className = 'key-hint';
+                    hintEl.textContent = hint;
+                    key.appendChild(hintEl);
+                }
+
+                key.addEventListener('click', () => handleNoteInteraction(noteWithOctave, key));
+                container.appendChild(key);
+            });
+
+            // Black keys
+            blackNoteNames.forEach((note, i) => {
+                if (!note) return;
+                const noteWithOctave = `${note}${octave}`;
+                const key = document.createElement('div');
+                key.className = 'black-key';
+                key.dataset.note = noteWithOctave;
+                key.dataset.pos = String(blackKeyPositions[i]);
+
+                const label = document.createElement('span');
+                label.className = 'note-label';
+                label.textContent = note.replace('#', '♯');
+                key.appendChild(label);
+
+                const hint = noteToKeyMapping[noteWithOctave];
+                if (hint) {
+                    const hintEl = document.createElement('span');
+                    hintEl.className = 'key-hint';
+                    hintEl.textContent = hint;
+                    key.appendChild(hintEl);
+                }
+
+                key.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleNoteInteraction(noteWithOctave, key);
+                });
+                container.appendChild(key);
             });
         }
-        
-        /**
-         * 個別の音名ボタンを作成します。
-         */
-        function createNoteButton(noteWithOctave) {
-            const button = document.createElement('button');
-            const note = noteWithOctave.slice(0, -1);
-            const octave = noteWithOctave.slice(-1);
-            
-            button.innerHTML = `<div class="text-sm font-bold">${note}</div><div class="text-xs opacity-75">${octave}</div>`;
-            button.dataset.note = noteWithOctave;
-            
-            const isBlackKey = note.includes('#');
-            if (isBlackKey) {
-                button.classList.add(
-                    'note-button', 'py-2', 'px-1', 'rounded-md', 'font-semibold', 'shadow',
-                    'bg-slate-800', 'hover:bg-pink-600', 'text-white', 'border', 'border-slate-700',
-                    'text-xs'
-                );
-            } else {
-                button.classList.add(
-                    'note-button', 'py-2', 'px-1', 'rounded-md', 'font-semibold', 'shadow',
-                    'bg-slate-600', 'hover:bg-pink-600', 'text-white', 'border', 'border-slate-500',
-                    'text-sm'
-                );
-            }
 
-            const keyboardKey = noteToKeyMapping[noteWithOctave];
-            if (keyboardKey) {
-                const hintSpan = document.createElement('span');
-                hintSpan.classList.add('keyboard-hint');
-                hintSpan.textContent = keyboardKey;
-                button.appendChild(hintSpan);
-            }
-            
-            button.addEventListener('click', async () => {
-                handleNoteInteraction(noteWithOctave, button);
-            });
-            
-            return button;
-        }
-        
-        /**
-         * 音の選択/解除と再生を行う共通の処理。
-         * クリックまたはキーボード入力から呼び出されます。
-         * @async
-         * @param {string} noteWithOctave - 対象の音名（オクターブ付き） (例: 'C4', 'C#3')。
-         * @param {HTMLElement} buttonElement - 対応するHTMLボタン要素。
-         */
+        // --- Note Interaction ---
         async function handleNoteInteraction(noteWithOctave, buttonElement) {
             if (!audioContextStarted) {
                 const audioReady = await initializeAudio();
                 if (!audioReady) return;
             }
-            
             toggleNoteSelectionUI(noteWithOctave, buttonElement);
             playNote(noteWithOctave);
-            
-            // 履歴に追加
             addToHistory(noteWithOctave);
         }
 
-        /**
-         * 指定された音を再生します（Tone.jsを使用）。
-         * @param {string} noteWithOctave - 再生する音名とオクターブ (例: 'C4', 'F#5')。
-         */
         function playNote(noteWithOctave) {
             if (synth && audioContextStarted) {
-                try {
-                    synth.triggerAttackRelease(noteWithOctave, "8n");
-                } catch (e) { console.error("音の再生中にエラー:", e); }
-            } else if (!audioContextStarted) {
-                console.warn("AudioContextが開始されていません。");
-            }
-        }
-        
-        /**
-         * 複数の音を同時に再生します。
-         * @param {Array} notes - 再生する音名の配列。
-         */
-        function playChord(notes) {
-            if (synth && audioContextStarted && notes.length > 0) {
-                try {
-                    synth.triggerAttackRelease(notes, "2n");
-                } catch (e) { console.error("和音の再生中にエラー:", e); }
-            }
-        }
-        
-        /**
-         * 選択された音を順次再生します。
-         */
-        async function playSequentially() {
-            if (!synth || !audioContextStarted || selectedUserNotes.size === 0) return;
-            
-            const notes = Array.from(selectedUserNotes).sort((a, b) => {
-                const aOctave = parseInt(a.slice(-1));
-                const bOctave = parseInt(b.slice(-1));
-                const aNote = a.slice(0, -1);
-                const bNote = b.slice(0, -1);
-                const aIndex = allNotes.indexOf(aNote);
-                const bIndex = allNotes.indexOf(bNote);
-                return (aOctave * 12 + aIndex) - (bOctave * 12 + bIndex);
-            });
-            
-            for (const note of notes) {
-                playNote(note);
-                await new Promise(resolve => setTimeout(resolve, 500)); // 500ms間隔
+                try { synth.triggerAttackRelease(noteWithOctave, "8n"); }
+                catch (e) { console.error("Play error:", e); }
             }
         }
 
-        /**
-         * UI上の音の選択状態（ボタンの見た目など）を切り替えます。
-         * @param {string} noteWithOctave - 対象の音名（オクターブ付き）。
-         * @param {HTMLElement} buttonElement - 対応するHTMLボタン要素。
-         */
+        function playChord(notes) {
+            if (synth && audioContextStarted && notes.length > 0) {
+                try { synth.triggerAttackRelease(notes, "2n"); }
+                catch (e) { console.error("Chord error:", e); }
+            }
+        }
+
+        async function playSequentially() {
+            if (!synth || !audioContextStarted || selectedUserNotes.size === 0) return;
+            const notes = sortNotes(Array.from(selectedUserNotes));
+            for (const note of notes) {
+                playNote(note);
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+
+        function sortNotes(notesArr) {
+            return notesArr.sort((a, b) => {
+                const aOctave = parseInt(a.slice(-1));
+                const bOctave = parseInt(b.slice(-1));
+                const aIndex = allNotes.indexOf(a.slice(0, -1));
+                const bIndex = allNotes.indexOf(b.slice(0, -1));
+                return (aOctave * 12 + aIndex) - (bOctave * 12 + bIndex);
+            });
+        }
+
         function toggleNoteSelectionUI(noteWithOctave, buttonElement) {
-            const noteButton = buttonElement || document.querySelector(`.note-button[data-note="${noteWithOctave}"]`);
-            if (!noteButton) return;
+            const el = buttonElement || document.querySelector(`[data-note="${noteWithOctave}"]`);
+            if (!el) return;
 
             if (selectedUserNotes.has(noteWithOctave)) {
                 selectedUserNotes.delete(noteWithOctave);
-                noteButton.classList.remove('selected', 'bg-pink-500', 'border-pink-400');
-                const isBlackKey = noteWithOctave.includes('#');
-                if (isBlackKey) {
-                    noteButton.classList.add('bg-slate-800', 'hover:bg-pink-600', 'border-slate-700');
-                } else {
-                    noteButton.classList.add('bg-slate-600', 'hover:bg-pink-600', 'border-slate-500');
-                }
+                el.classList.remove('selected');
             } else {
                 selectedUserNotes.add(noteWithOctave);
-                noteButton.classList.add('selected', 'bg-pink-500', 'border-pink-400');
-                noteButton.classList.remove('bg-slate-600', 'bg-slate-800', 'hover:bg-pink-600');
+                el.classList.add('selected');
             }
             updateSelectedNotesDisplay();
         }
 
-        /**
-         * 画面上の「選択中の音:」表示を更新します。
-         */
         function updateSelectedNotesDisplay() {
             if (selectedUserNotes.size === 0) {
                 selectedNotesDisplay.textContent = 'なし';
+                selectedNotesDisplay.classList.remove('text-amber-300');
+                selectedNotesDisplay.classList.add('text-stone-500');
             } else {
-                const sortedNotes = Array.from(selectedUserNotes).sort((a, b) => {
-                    const aOctave = parseInt(a.slice(-1));
-                    const bOctave = parseInt(b.slice(-1));
-                    const aNote = a.slice(0, -1);
-                    const bNote = b.slice(0, -1);
-                    const aIndex = allNotes.indexOf(aNote);
-                    const bIndex = allNotes.indexOf(bNote);
-                    return (aOctave * 12 + aIndex) - (bOctave * 12 + bIndex);
-                });
-                selectedNotesDisplay.textContent = sortedNotes.join(', ');
+                const sorted = sortNotes(Array.from(selectedUserNotes));
+                selectedNotesDisplay.textContent = sorted.join('  ');
+                selectedNotesDisplay.classList.remove('text-stone-500');
+                selectedNotesDisplay.classList.add('text-amber-300');
             }
         }
-        
-        /**
-         * 音の選択履歴に追加します。
-         */
+
         function addToHistory(noteWithOctave) {
             noteHistory.unshift(noteWithOctave);
-            if (noteHistory.length > 10) {
-                noteHistory = noteHistory.slice(0, 10);
-            }
+            if (noteHistory.length > 10) noteHistory = noteHistory.slice(0, 10);
             updateHistoryDisplay();
         }
-        
-        /**
-         * 履歴表示を更新します。
-         */
+
         function updateHistoryDisplay() {
-            const historyDisplay = document.getElementById('note-history-display');
-            if (noteHistory.length === 0) {
-                historyDisplay.textContent = 'なし';
-            } else {
-                historyDisplay.textContent = noteHistory.slice(0, 5).join(' → ');
-            }
+            const el = document.getElementById('note-history-display');
+            el.textContent = noteHistory.length === 0 ? 'なし' : noteHistory.slice(0, 5).join(' → ');
         }
 
-        // 「クリア」ボタンがクリックされたときの処理
+        // --- Clear ---
         clearSelectionButton.addEventListener('click', () => {
             selectedUserNotes.clear();
-            document.querySelectorAll('.note-button.selected').forEach(btn => {
-                btn.classList.remove('selected', 'bg-pink-500', 'border-pink-400');
-                const noteWithOctave = btn.dataset.note;
-                const isBlackKey = noteWithOctave.includes('#');
-                if (isBlackKey) {
-                    btn.classList.add('bg-slate-800', 'hover:bg-pink-600', 'border-slate-700');
-                } else {
-                    btn.classList.add('bg-slate-600', 'hover:bg-pink-600', 'border-slate-500');
-                }
-            });
+            document.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
             updateSelectedNotesDisplay();
-            keyResultsArea.innerHTML = '<p class="text-slate-400">ここに推測結果が表示されます。</p>';
+            keyResultsArea.innerHTML = '<p class="text-sm text-stone-600 py-8 text-center">音を選択して「キーを推測する」を押してください</p>';
         });
 
-        // --- キーボード入力の処理 ---
-        // window全体でキーダウンイベントを監視
+        // --- Keyboard ---
         window.addEventListener('keydown', async (event) => {
-            if (currentInputMode !== 'keyboard') return; // キーボード入力モードでない場合は何もしない
-            
-            // 現在フォーカスされている要素が入力フィールド（input, textarea, select）の場合は、
-            // キーボードショートカットを無効にし、通常の文字入力を妨げないようにする
-            const targetTagName = event.target.tagName.toLowerCase();
-            if (targetTagName === 'input' || targetTagName === 'textarea' || targetTagName === 'select') {
-                return;
-            }
+            if (currentInputMode !== 'keyboard') return;
+            const tag = event.target.tagName.toLowerCase();
+            if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
 
-            const keyPressed = event.key.toLowerCase();
-            const noteWithOctave = keyToNoteMapping[keyPressed];
-
+            const noteWithOctave = keyToNoteMapping[event.key.toLowerCase()];
             if (noteWithOctave) {
                 event.preventDefault();
-                const buttonElement = document.querySelector(`.note-button[data-note="${noteWithOctave}"]`);
-                if (buttonElement) {
+                const el = document.querySelector(`[data-note="${noteWithOctave}"]`);
+                if (el) {
                     if (!audioContextStarted) {
                         const audioReady = await initializeAudio();
                         if (!audioReady) return;
                     }
-                    toggleNoteSelectionUI(noteWithOctave, buttonElement);
+                    toggleNoteSelectionUI(noteWithOctave, el);
                     playNote(noteWithOctave);
                     addToHistory(noteWithOctave);
-
-                    buttonElement.classList.add('ring-2', 'ring-sky-400');
-                    setTimeout(() => {
-                        buttonElement.classList.remove('ring-2', 'ring-sky-400');
-                    }, 150);
+                    el.classList.add('pressing');
+                    setTimeout(() => el.classList.remove('pressing'), 150);
                 }
             }
         });
 
+        // --- Krumhansl-Schmuckler Key Detection ---
+        // Krumhansl-Kessler key profiles (perceptual weights for each pitch class)
+        const majorProfile = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
+        const minorProfile = [6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
 
-        // --- キー推測のロジック ---
-        /**
-         * 「キーを推測する」ボタンがクリックされたときに実行される関数。
-         * 選択された音に基づいて、可能性の高いキーを計算し、結果を表示します。
-         */
+        // Pearson correlation between two arrays
+        function pearsonCorrelation(x, y) {
+            const n = x.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+            for (let i = 0; i < n; i++) {
+                sumX += x[i]; sumY += y[i];
+                sumXY += x[i] * y[i];
+                sumX2 += x[i] * x[i]; sumY2 += y[i] * y[i];
+            }
+            const num = n * sumXY - sumX * sumY;
+            const den = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+            return den === 0 ? 0 : num / den;
+        }
+
+        // Rotate a profile array so that index `shift` gets the root weight.
+        // e.g., shift=5 (F) → profile[5] = root weight (6.35)
+        function rotateProfile(profile, shift) {
+            const len = profile.length;
+            const s = ((len - shift) % len + len) % len;
+            return [...profile.slice(s), ...profile.slice(0, s)];
+        }
+
+        // Get the relative key name (e.g., "C Major" -> "A Minor")
+        function getRelativeKey(keyName) {
+            const parts = keyName.split(' ');
+            const root = parts[0];
+            const mode = parts[1];
+            const rootIndex = allNotes.indexOf(root);
+            if (mode === 'Major') {
+                const relIndex = (rootIndex + 9) % 12; // relative minor is 9 semitones up (= 3 down)
+                return `${allNotes[relIndex]} Minor`;
+            } else {
+                const relIndex = (rootIndex + 3) % 12; // relative major is 3 semitones up
+                return `${allNotes[relIndex]} Major`;
+            }
+        }
+
         guessKeyButton.addEventListener('click', async () => {
-            // オーディオが未初期化で、かつ何らかの音が選択されている場合、まずオーディオを初期化試行
-            if (!audioContextStarted && selectedUserNotes.size > 0) { 
+            if (!audioContextStarted && selectedUserNotes.size > 0) {
                 const audioReady = await initializeAudio();
-                 if (!audioReady) { // 初期化失敗しても、推測処理は続行する旨をコンソールに警告表示
-                     console.warn("オーディオは初期化されていませんが、キーの推測処理を続行します。");
-                 }
-            } else if (!audioContextStarted && selectedUserNotes.size === 0) {
-                // 音が選択されておらず、オーディオも未初期化なら、オーディオ初期化を試みる (次の音選択に備えるため)
+                if (!audioReady) console.warn("Audio not ready, continuing...");
+            } else if (!audioContextStarted) {
                 await initializeAudio();
             }
 
-            if (selectedUserNotes.size === 0) { // 選択された音が一つもない場合
-                showModal('推測するには、少なくとも1つの音を選択してください。');
+            if (selectedUserNotes.size === 0) {
+                showToast('少なくとも1つの音を選択してください');
                 return;
             }
-            if (selectedUserNotes.size < 3) { // 選択された音が3つ未満の場合 (精度が低い可能性があるため警告)
-                 showModal('より正確な推測のために、3つ以上の音を選択することをおすすめします。');
-                 // 注意: この場合でも処理は続行する
+            if (selectedUserNotes.size < 3) {
+                showToast('3つ以上の音を選択するとより正確です');
             }
 
-            const results = []; // 推測結果を格納する配列
-            
-            // 選択された音からオクターブ情報を除去し、重複を排除
+            // Build pitch-class presence vector (12 elements, 1 = present, 0 = absent)
             const userNotesWithoutOctave = new Set();
-            selectedUserNotes.forEach(userNoteWithOctave => {
-                const noteWithoutOctave = userNoteWithOctave.slice(0, -1);
-                userNotesWithoutOctave.add(noteWithoutOctave);
-            });
-            
-            // 定義されている全てのスケール（キー）に対してループ処理
-            for (const scaleName in scales) {
-                const scaleNotes = scales[scaleName]; // 現在のスケールの構成音
-                let matchCount = 0;
-                
-                // 重複排除済みの音程クラスでマッチング判定
-                userNotesWithoutOctave.forEach(noteWithoutOctave => {
-                    if (scaleNotes.includes(noteWithoutOctave)) {
-                        matchCount++;
-                    }
+            selectedUserNotes.forEach(n => userNotesWithoutOctave.add(n.slice(0, -1)));
+            const inputVector = allNotes.map(n => userNotesWithoutOctave.has(n) ? 1 : 0);
+
+            const results = [];
+
+            // Test all 24 keys (12 roots × major/minor)
+            allNotes.forEach((root, i) => {
+                // Major key: correlate input against rotated major profile
+                const majProfile = rotateProfile(majorProfile, i);
+                const majCorr = pearsonCorrelation(inputVector, majProfile);
+                const majScaleNotes = scales[`${root}_major`];
+                let majMatch = 0;
+                userNotesWithoutOctave.forEach(n => { if (majScaleNotes.includes(n)) majMatch++; });
+
+                results.push({
+                    key: `${root} Major`,
+                    scaleName: `${root}_major`,
+                    score: majCorr,
+                    matchCount: majMatch,
+                    totalSelectedNotes: userNotesWithoutOctave.size,
+                    scaleNotes: majScaleNotes
                 });
 
-                const score = (matchCount / userNotesWithoutOctave.size) * 100;
-                
-                const rootOfScale = scaleName.split('_')[0];
-                let bonus = 0;
-                if(userNotesWithoutOctave.has(rootOfScale)) bonus += 10;
-                
-                const fifthNoteIndex = (allNotes.indexOf(rootOfScale) + 7) % 12;
-                const fifthNote = allNotes[fifthNoteIndex];
-                if(userNotesWithoutOctave.has(fifthNote)) bonus += 5;
+                // Minor key: correlate input against rotated minor profile
+                const minProfile = rotateProfile(minorProfile, i);
+                const minCorr = pearsonCorrelation(inputVector, minProfile);
+                const minScaleNotes = scales[`${root}_minor`];
+                let minMatch = 0;
+                userNotesWithoutOctave.forEach(n => { if (minScaleNotes.includes(n)) minMatch++; });
 
-                if (matchCount > 0) { // 一つでも音が一致していれば結果候補に追加
-                    results.push({
-                        key: scaleName.replace('_', ' '), // 表示用にスケール名を整形 (例: 'C major')
-                        score: score + bonus, // 基本スコアにボーナスを加算
-                        matchCount: matchCount,
-                        totalSelectedNotes: userNotesWithoutOctave.size, // 選択された音の総数
-                        scaleNotes: scaleNotes // 参考情報としてスケール構成音も保持
-                    });
-                }
-            }
+                results.push({
+                    key: `${root} Minor`,
+                    scaleName: `${root}_minor`,
+                    score: minCorr,
+                    matchCount: minMatch,
+                    totalSelectedNotes: userNotesWithoutOctave.size,
+                    scaleNotes: minScaleNotes
+                });
+            });
 
-            // 結果をスコアの高い順にソート。スコアが同じ場合は一致数が多い方を優先。
             results.sort((a, b) => b.score - a.score || b.matchCount - a.matchCount);
-            displayResults(results); // 整形して結果を表示
+            displayResults(results);
         });
 
-        /**
-         * 計算されたキーの推測結果をHTMLに描画します。
-         * @param {Array<Object>} results - 推測結果のオブジェクトの配列。各オブジェクトはkey, score, matchCount, scaleNotesを含む。
-         */
         function displayResults(results) {
             keyResultsArea.innerHTML = '';
             if (results.length === 0 && selectedUserNotes.size > 0) {
-                keyResultsArea.innerHTML = '<p class="text-red-400">選択された音に適合するキーが見つかりませんでした。音の選択を変えてみてください。</p>';
+                keyResultsArea.innerHTML = '<p class="text-sm text-red-400/80 py-8 text-center">適合するキーが見つかりませんでした</p>';
                 return;
-            } else if (results.length === 0) {
-                 keyResultsArea.innerHTML = '<p class="text-slate-400">ここに推測結果が表示されます。</p>';
+            }
+            if (results.length === 0) {
+                keyResultsArea.innerHTML = '<p class="text-sm text-stone-600 py-8 text-center">音を選択して「キーを推測する」を押してください</p>';
                 return;
             }
 
-            const ul = document.createElement('ul');
-            ul.classList.add('space-y-2');
-            
-            results.slice(0, 5).forEach(result => {
-                const li = document.createElement('li');
-                li.classList.add('result-item', 'p-3', 'bg-slate-600', 'rounded-md', 'shadow');
-                
-                const keyName = result.key.charAt(0).toUpperCase() + result.key.slice(1);
-                const scoreText = `適合度: ${result.score.toFixed(0)}%`;
-                const matchText = `(一致: ${result.matchCount}/${result.totalSelectedNotes}音)`;
+            // Filter to positive correlations only, take top 5
+            const positiveResults = results.filter(r => r.score > 0);
+            const topResults = positiveResults.slice(0, 5);
 
-                const keySpan = document.createElement('span');
-                keySpan.textContent = keyName;
-                keySpan.classList.add('font-semibold', 'text-sky-300', 'text-lg');
+            if (topResults.length === 0) {
+                keyResultsArea.innerHTML = '<p class="text-sm text-red-400/80 py-8 text-center">適合するキーが見つかりませんでした</p>';
+                return;
+            }
 
-                const scoreSpan = document.createElement('span');
-                scoreSpan.textContent = `${scoreText} ${matchText}`;
-                scoreSpan.classList.add('text-sm', 'text-slate-400', 'ml-2');
-                
-                const scaleNotesDiv = document.createElement('div');
-                scaleNotesDiv.classList.add('text-xs', 'text-slate-500', 'mt-1', 'flex', 'items-center', 'gap-2');
-                
-                const scaleNotesSpan = document.createElement('span');
-                scaleNotesSpan.textContent = `構成音: ${result.scaleNotes.join(', ')}`;
-                
-                const previewButton = document.createElement('button');
-                previewButton.textContent = '試聴';
-                previewButton.classList.add('px-2', 'py-1', 'bg-green-600', 'hover:bg-green-700', 'text-white', 'text-xs', 'rounded', 'transition-colors');
-                previewButton.addEventListener('click', async () => {
+            const maxScore = topResults[0].score;
+            const rankColors = [
+                { bg: 'bg-amber-500/10', text: 'text-amber-300', bar: 'bg-gradient-to-r from-amber-500 to-yellow-600', badge: 'bg-amber-500/20 text-amber-200' },
+                { bg: 'bg-orange-500/8', text: 'text-orange-300', bar: 'bg-gradient-to-r from-orange-500 to-amber-500', badge: 'bg-orange-500/15 text-orange-300' },
+                { bg: 'bg-stone-400/5', text: 'text-stone-300', bar: 'bg-gradient-to-r from-stone-400 to-stone-300', badge: 'bg-stone-400/10 text-stone-300' },
+                { bg: 'bg-stone-400/3', text: 'text-stone-400', bar: 'bg-stone-500/50', badge: 'bg-stone-400/8 text-stone-400' },
+                { bg: 'bg-stone-400/2', text: 'text-stone-500', bar: 'bg-stone-600/50', badge: 'bg-stone-400/5 text-stone-500' },
+            ];
+
+            const container = document.createElement('div');
+            container.className = 'space-y-2';
+
+            // Track shown keys to mark relative key relationships
+            const shownKeys = topResults.map(r => r.key);
+
+            topResults.forEach((result, i) => {
+                const colors = rankColors[Math.min(i, rankColors.length - 1)];
+                const delay = i * 80;
+
+                const item = document.createElement('div');
+                item.className = `result-item rounded-xl p-3 ${colors.bg} animate-in`;
+                item.style.animationDelay = `${delay}ms`;
+                item.style.opacity = '0';
+
+                const displayName = result.key;
+                const relativeKey = getRelativeKey(result.key);
+                const relativeInList = shownKeys.includes(relativeKey);
+
+                // Correlation score as percentage (0-100 scale for display)
+                const corrPercent = (result.score * 100).toFixed(1);
+                // Bar width relative to top result
+                const barWidth = Math.max((result.score / maxScore) * 100, 5);
+
+                // Relative key badge
+                const relativeBadge = relativeInList
+                    ? `<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-stone-800 text-stone-400">≈ ${relativeKey}</span>`
+                    : `<span class="text-[10px] text-stone-600">rel. ${relativeKey}</span>`;
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="rank-badge ${colors.badge}">${i + 1}</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
+                                <span class="font-semibold ${colors.text} text-base">${displayName}</span>
+                                <span class="text-xs text-stone-500">${corrPercent}</span>
+                                <span class="text-[10px] text-stone-600">(${result.matchCount}/${result.totalSelectedNotes}音一致)</span>
+                                ${relativeBadge}
+                            </div>
+                            <div class="score-bar-bg">
+                                <div class="score-bar-fill ${colors.bar}" style="width: 0%" data-target="${barWidth}"></div>
+                            </div>
+                            <div class="flex items-center gap-2 mt-1.5">
+                                <span class="text-[10px] text-stone-600">${result.scaleNotes.join(' · ')}</span>
+                                <button class="preview-btn text-[10px] px-2 py-0.5 rounded-full bg-stone-800 hover:bg-stone-700 text-stone-500 hover:text-stone-400 transition-colors"
+                                    data-scale='${JSON.stringify(result)}'>
+                                    ♪ 試聴
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(item);
+            });
+
+            keyResultsArea.appendChild(container);
+
+            // Animate score bars
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    container.querySelectorAll('.score-bar-fill').forEach(bar => {
+                        bar.style.width = bar.dataset.target + '%';
+                    });
+                }, 100);
+            });
+
+            // Preview buttons
+            container.querySelectorAll('.preview-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
                     if (!audioContextStarted) {
                         const audioReady = await initializeAudio();
                         if (!audioReady) return;
                     }
-                    playScaleSequentially(result);
+                    const data = JSON.parse(btn.dataset.scale);
+                    playScaleSequentially(data);
                 });
-                
-                scaleNotesDiv.appendChild(scaleNotesSpan);
-                scaleNotesDiv.appendChild(previewButton);
-
-                li.appendChild(keySpan);
-                li.appendChild(scoreSpan);
-                li.appendChild(scaleNotesDiv);
-                ul.appendChild(li);
             });
-            keyResultsArea.appendChild(ul);
         }
-        
-        /**
-         * スケールの音を1オクターブ分再生します。
-         * ルートから次のオクターブのルートまで、8音を順次再生。
-         */
+
         async function playScaleSequentially(scaleData) {
-            // スケール名からルート音を取得 (例: "C major" -> "C")
             const scaleName = scaleData.key || scaleData.name || 'C';
-            const rootNote = scaleName.split(' ')[0]; // "C major" -> "C"
+            const rootNote = scaleName.split(' ')[0];
             const scaleNotes = scaleData.scaleNotes || scaleData;
-            
-            // ルート音のインデックスを取得
             const rootIndex = allNotes.indexOf(rootNote);
             if (rootIndex === -1) return;
-            
-            // ルートから1オクターブ分のスケール音を構築
-            const notesToPlay = [];
-            
-            // まずルート音を追加
-            notesToPlay.push(rootNote + '4');
-            
-            // スケール構成音をルートより上の音から順に追加
+
+            const notesToPlay = [rootNote + '4'];
             for (const note of scaleNotes) {
-                const noteIndex = allNotes.indexOf(note);
-                if (noteIndex > rootIndex) {
-                    notesToPlay.push(note + '4');
-                }
+                if (allNotes.indexOf(note) > rootIndex) notesToPlay.push(note + '4');
             }
-            
-            // スケール構成音をルートより下の音から順に追加（次のオクターブ）
             for (const note of scaleNotes) {
-                const noteIndex = allNotes.indexOf(note);
-                if (noteIndex < rootIndex) {
-                    notesToPlay.push(note + '5');
-                }
+                if (allNotes.indexOf(note) < rootIndex) notesToPlay.push(note + '5');
             }
-            
-            // 最後に次のオクターブのルート音を追加
             notesToPlay.push(rootNote + '5');
-            
-            // 最大8音に制限
+
             const finalNotes = notesToPlay.slice(0, 8);
-            
-            // 順次再生
-            for (const noteWithOctave of finalNotes) {
-                playNote(noteWithOctave);
+            for (const n of finalNotes) {
+                playNote(n);
                 await new Promise(resolve => setTimeout(resolve, 450));
             }
         }
-        
 
-        // 新しいコントロールのイベントリスナーを設定
-        
-        
-        // 音量スライダー
+        // --- Controls ---
         const volumeSlider = document.getElementById('volume-slider');
         const volumeDisplay = document.getElementById('volume-display');
         volumeSlider.addEventListener('input', (e) => {
             currentVolume = parseFloat(e.target.value);
             volumeDisplay.textContent = `${currentVolume}dB`;
-            if (synth) {
-                synth.volume.value = currentVolume;
-            }
+            if (synth) synth.volume.value = currentVolume;
         });
-        
-        // BPM入力
+
         const bpmInput = document.getElementById('bpm-input');
-        bpmInput.addEventListener('change', (e) => {
-            currentBPM = parseInt(e.target.value);
-        });
-        
-        // 順次再生ボタン
-        const playbackButton = document.getElementById('playback-button');
-        playbackButton.addEventListener('click', async () => {
-            if (!audioContextStarted) {
-                const audioReady = await initializeAudio();
-                if (!audioReady) return;
-            }
-            if (selectedUserNotes.size === 0) {
-                showModal('再生する音を選択してください。');
-                return;
-            }
+        bpmInput.addEventListener('change', (e) => { currentBPM = parseInt(e.target.value); });
+
+        document.getElementById('playback-button').addEventListener('click', async () => {
+            if (!audioContextStarted) { if (!(await initializeAudio())) return; }
+            if (selectedUserNotes.size === 0) { showToast('再生する音を選択してください'); return; }
             playSequentially();
         });
-        
-        // 和音確認ボタン
-        const chordButton = document.getElementById('chord-button');
-        chordButton.addEventListener('click', async () => {
-            if (!audioContextStarted) {
-                const audioReady = await initializeAudio();
-                if (!audioReady) return;
-            }
-            if (selectedUserNotes.size === 0) {
-                showModal('再生する音を選択してください。');
-                return;
-            }
-            const notes = Array.from(selectedUserNotes);
-            playChord(notes);
+
+        document.getElementById('chord-button').addEventListener('click', async () => {
+            if (!audioContextStarted) { if (!(await initializeAudio())) return; }
+            if (selectedUserNotes.size === 0) { showToast('再生する音を選択してください'); return; }
+            playChord(Array.from(selectedUserNotes));
         });
-        
-        // ループ再生ボタン
+
         const loopButton = document.getElementById('loop-button');
         const stopLoopButton = document.getElementById('stop-loop-button');
-        
+
         loopButton.addEventListener('click', async () => {
-            if (!audioContextStarted) {
-                const audioReady = await initializeAudio();
-                if (!audioReady) return;
-            }
-            if (selectedUserNotes.size === 0) {
-                showModal('再生する音を選択してください。');
-                return;
-            }
+            if (!audioContextStarted) { if (!(await initializeAudio())) return; }
+            if (selectedUserNotes.size === 0) { showToast('再生する音を選択してください'); return; }
             if (isLooping) return;
-            
+
             isLooping = true;
             loopButton.disabled = true;
             stopLoopButton.disabled = false;
-            
-            const notes = Array.from(selectedUserNotes).sort((a, b) => {
-                const aOctave = parseInt(a.slice(-1));
-                const bOctave = parseInt(b.slice(-1));
-                const aNote = a.slice(0, -1);
-                const bNote = b.slice(0, -1);
-                const aIndex = allNotes.indexOf(aNote);
-                const bIndex = allNotes.indexOf(bNote);
-                return (aOctave * 12 + aIndex) - (bOctave * 12 + bIndex);
-            });
-            
-            const beatDuration = 60000 / currentBPM; // ms
+
+            const notes = sortNotes(Array.from(selectedUserNotes));
+            const beatDuration = 60000 / currentBPM;
             let noteIndex = 0;
-            
+
             loopInterval = setInterval(() => {
                 if (!isLooping) return;
                 playNote(notes[noteIndex]);
                 noteIndex = (noteIndex + 1) % notes.length;
             }, beatDuration);
         });
-        
+
         stopLoopButton.addEventListener('click', () => {
             isLooping = false;
-            if (loopInterval) {
-                clearInterval(loopInterval);
-                loopInterval = null;
-            }
+            if (loopInterval) { clearInterval(loopInterval); loopInterval = null; }
             loopButton.disabled = false;
             stopLoopButton.disabled = true;
         });
-        
-        
-        // --- アプリケーションの初期化処理 ---
-        initializeNoteButtons();
+
+        // --- Init ---
+        buildPianoOctave('piano-octave5', 5);
+        buildPianoOctave('piano-octave4', 4);
         updateSelectedNotesDisplay();
         updateHistoryDisplay();
-        inputModeHint.textContent = '（クリックで再生・選択）';
-
     </script>
 </body>
 </html>
